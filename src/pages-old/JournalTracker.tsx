@@ -408,10 +408,10 @@ export function JournalTracker() {
     if (assignmentId.startsWith("virtual-")) {
       try {
         const rest = assignmentId.replace("virtual-", "");
-        const dashIdx = rest.indexOf("-");
-        if (dashIdx === -1) return;
-        const taskId = rest.slice(0, dashIdx);
-        const dateStr = rest.slice(dashIdx + 1);
+        // Date format is YYYY-MM-DD (10 chars), always at the end after a dash
+        // Parse from end to handle taskIds that may contain dashes (CUIDs)
+        const dateStr = rest.slice(-10); // Last 10 characters (YYYY-MM-DD)
+        const taskId = rest.slice(0, -11); // Everything before the last dash and date
 
         // Create a real assignment and mark it completed
         await createAssignment({ taskId, dateStr, completed: true });
@@ -449,16 +449,41 @@ export function JournalTracker() {
 
   const handleMarkTodayComplete = async () => {
     const todayStr = getLocalDateStr(new Date());
-    const todayAssignments = assignments.filter((a) => a.dateStr === todayStr);
+    // Use allAssignments to include virtual (recurring) tasks
+    const todayAssignments = allAssignments.filter((a) => a.dateStr === todayStr);
     if (todayAssignments.length === 0) return;
     const allComplete = todayAssignments.every((a) => a.completed);
 
     try {
-      await Promise.all(
-        todayAssignments.map((a) =>
-          updateAssignment(a.id, { completed: !allComplete }),
-        ),
+      // Separate real and virtual assignments
+      const realAssignments = todayAssignments.filter(
+        (a) => !a.id.startsWith("virtual-")
       );
+      const virtualAssignments = todayAssignments.filter((a) =>
+        a.id.startsWith("virtual-")
+      );
+
+      // Update real assignments
+      if (realAssignments.length > 0) {
+        await Promise.all(
+          realAssignments.map((a) =>
+            updateAssignment(a.id, { completed: !allComplete })
+          )
+        );
+      }
+
+      // Create real assignments from virtual ones (only when marking complete, not uncomplete)
+      if (!allComplete && virtualAssignments.length > 0) {
+        await Promise.all(
+          virtualAssignments.map(async (va) => {
+            // Parse taskId from virtual ID: "virtual-{taskId}-{dateStr}"
+            const rest = va.id.replace("virtual-", "");
+            const taskId = rest.slice(0, -11); // Remove "-YYYY-MM-DD" suffix
+            if (!taskId) return;
+            await createAssignment({ taskId, dateStr: todayStr, completed: true });
+          })
+        );
+      }
     } catch (err) {
       console.error("Failed to mark today complete", err);
     }
@@ -498,7 +523,10 @@ export function JournalTracker() {
       // Create real assignments from virtual ones
       if (virtualAssignments.length > 0) {
         const createPromises = virtualAssignments.map(async (va) => {
-          const taskId = va.id.split("-")[1];
+          // Parse taskId from virtual ID: "virtual-{taskId}-{dateStr}"
+          // Date format is YYYY-MM-DD (10 chars) at the end
+          const rest = va.id.replace("virtual-", "");
+          const taskId = rest.slice(0, -11); // Remove "-YYYY-MM-DD" suffix
           if (!taskId) return;
 
           const res = await fetch("/api/assignments", {
@@ -576,7 +604,7 @@ export function JournalTracker() {
             </div>
             <div>
               <h1 className="font-handwriting text-5xl font-bold text-[#2C2416] leading-none">
-                Weekly Journal
+                Tasky
               </h1>
               <p className="text-[#8B7355] italic text-lg">
                 Focus on what matters, one day at a time.

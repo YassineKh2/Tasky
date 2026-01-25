@@ -16,8 +16,8 @@ const crimsonText = Crimson_Text({
 });
 
 export const metadata: Metadata = {
-  title: "Task Tracker",
-  description: "Task tracking and journal management app",
+  title: "Tasky",
+  description: "Your personal task tracking and journal management companion",
 };
 
 export default function RootLayout({

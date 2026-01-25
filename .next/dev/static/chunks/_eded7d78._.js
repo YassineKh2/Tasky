@@ -6179,10 +6179,10 @@ function JournalTracker() {
         if (assignmentId.startsWith("virtual-")) {
             try {
                 const rest = assignmentId.replace("virtual-", "");
-                const dashIdx = rest.indexOf("-");
-                if (dashIdx === -1) return;
-                const taskId = rest.slice(0, dashIdx);
-                const dateStr = rest.slice(dashIdx + 1);
+                // Date format is YYYY-MM-DD (10 chars), always at the end after a dash
+                // Parse from end to handle taskIds that may contain dashes (CUIDs)
+                const dateStr = rest.slice(-10); // Last 10 characters (YYYY-MM-DD)
+                const taskId = rest.slice(0, -11); // Everything before the last dash and date
                 // Create a real assignment and mark it completed
                 await createAssignment({
                     taskId,
@@ -6217,13 +6217,34 @@ function JournalTracker() {
     };
     const handleMarkTodayComplete = async ()=>{
         const todayStr = getLocalDateStr(new Date());
-        const todayAssignments = assignments.filter((a)=>a.dateStr === todayStr);
+        // Use allAssignments to include virtual (recurring) tasks
+        const todayAssignments = allAssignments.filter((a)=>a.dateStr === todayStr);
         if (todayAssignments.length === 0) return;
         const allComplete = todayAssignments.every((a)=>a.completed);
         try {
-            await Promise.all(todayAssignments.map((a)=>updateAssignment(a.id, {
-                    completed: !allComplete
-                })));
+            // Separate real and virtual assignments
+            const realAssignments = todayAssignments.filter((a)=>!a.id.startsWith("virtual-"));
+            const virtualAssignments = todayAssignments.filter((a)=>a.id.startsWith("virtual-"));
+            // Update real assignments
+            if (realAssignments.length > 0) {
+                await Promise.all(realAssignments.map((a)=>updateAssignment(a.id, {
+                        completed: !allComplete
+                    })));
+            }
+            // Create real assignments from virtual ones (only when marking complete, not uncomplete)
+            if (!allComplete && virtualAssignments.length > 0) {
+                await Promise.all(virtualAssignments.map(async (va)=>{
+                    // Parse taskId from virtual ID: "virtual-{taskId}-{dateStr}"
+                    const rest = va.id.replace("virtual-", "");
+                    const taskId = rest.slice(0, -11); // Remove "-YYYY-MM-DD" suffix
+                    if (!taskId) return;
+                    await createAssignment({
+                        taskId,
+                        dateStr: todayStr,
+                        completed: true
+                    });
+                }));
+            }
         } catch (err) {
             console.error("Failed to mark today complete", err);
         }
@@ -6251,7 +6272,10 @@ function JournalTracker() {
             // Create real assignments from virtual ones
             if (virtualAssignments.length > 0) {
                 const createPromises = virtualAssignments.map(async (va)=>{
-                    const taskId = va.id.split("-")[1];
+                    // Parse taskId from virtual ID: "virtual-{taskId}-{dateStr}"
+                    // Date format is YYYY-MM-DD (10 chars) at the end
+                    const rest = va.id.replace("virtual-", "");
+                    const taskId = rest.slice(0, -11); // Remove "-YYYY-MM-DD" suffix
                     if (!taskId) return;
                     const res = await fetch("/api/assignments", {
                         method: "POST",
@@ -6324,22 +6348,22 @@ function JournalTracker() {
                                             className: "w-6 h-6"
                                         }, void 0, false, {
                                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                            lineNumber: 575,
+                                            lineNumber: 603,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 574,
+                                        lineNumber: 602,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
                                                 className: "font-handwriting text-5xl font-bold text-[#2C2416] leading-none",
-                                                children: "Weekly Journal"
+                                                children: "Tasky"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                                lineNumber: 578,
+                                                lineNumber: 606,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6347,19 +6371,19 @@ function JournalTracker() {
                                                 children: "Focus on what matters, one day at a time."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                                lineNumber: 581,
+                                                lineNumber: 609,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 577,
+                                        lineNumber: 605,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                lineNumber: 573,
+                                lineNumber: 601,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6370,14 +6394,14 @@ function JournalTracker() {
                                         onClick: handleMarkTodayComplete
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 588,
+                                        lineNumber: 616,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "h-8 w-px bg-[#E8DCC4] hidden md:block"
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 592,
+                                        lineNumber: 620,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ViewToggle$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ViewToggle"], {
@@ -6385,19 +6409,19 @@ function JournalTracker() {
                                         onChange: setView
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 593,
+                                        lineNumber: 621,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                lineNumber: 587,
+                                lineNumber: 615,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                        lineNumber: 572,
+                        lineNumber: 600,
                         columnNumber: 9
                     }, this),
                     view !== "stats" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6412,12 +6436,12 @@ function JournalTracker() {
                                         className: "w-6 h-6"
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 605,
+                                        lineNumber: 633,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                    lineNumber: 601,
+                                    lineNumber: 629,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6425,7 +6449,7 @@ function JournalTracker() {
                                     children: getHeaderText()
                                 }, void 0, false, {
                                     fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                    lineNumber: 607,
+                                    lineNumber: 635,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6435,23 +6459,23 @@ function JournalTracker() {
                                         className: "w-6 h-6"
                                     }, void 0, false, {
                                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                        lineNumber: 614,
+                                        lineNumber: 642,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                                    lineNumber: 610,
+                                    lineNumber: 638,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                            lineNumber: 600,
+                            lineNumber: 628,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                        lineNumber: 599,
+                        lineNumber: 627,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -6466,7 +6490,7 @@ function JournalTracker() {
                             onRemoveTask: handleRemoveTask
                         }, void 0, false, {
                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                            lineNumber: 623,
+                            lineNumber: 651,
                             columnNumber: 13
                         }, this) : view === "month" ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$MonthCalendar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["MonthCalendar"], {
                             currentDate: currentDate,
@@ -6484,7 +6508,7 @@ function JournalTracker() {
                             daysOff: daysOff
                         }, void 0, false, {
                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                            lineNumber: 633,
+                            lineNumber: 661,
                             columnNumber: 13
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$StatsPanel$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["StatsPanel"], {
                             taskDefinitions: taskDefinitions,
@@ -6492,12 +6516,12 @@ function JournalTracker() {
                             daysOff: daysOff
                         }, void 0, false, {
                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                            lineNumber: 649,
+                            lineNumber: 677,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                        lineNumber: 621,
+                        lineNumber: 649,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("footer", {
@@ -6507,18 +6531,18 @@ function JournalTracker() {
                             children: '"The secret of your future is hidden in your daily routine."'
                         }, void 0, false, {
                             fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                            lineNumber: 659,
+                            lineNumber: 687,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                        lineNumber: 658,
+                        lineNumber: 686,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 570,
+                lineNumber: 598,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$TaskLibrary$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TaskLibrary"], {
@@ -6532,7 +6556,7 @@ function JournalTracker() {
                 onDeleteTask: setDeletingTask
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 666,
+                lineNumber: 694,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$BulkActionsBar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["BulkActionsBar"], {
@@ -6541,7 +6565,7 @@ function JournalTracker() {
                 onMarkComplete: handleBulkComplete
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 678,
+                lineNumber: 706,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$TaskCreationModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TaskCreationModal"], {
@@ -6550,7 +6574,7 @@ function JournalTracker() {
                 onSave: handleCreateTaskDef
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 685,
+                lineNumber: 713,
                 columnNumber: 7
             }, this),
             editingTask && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$TaskEditModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TaskEditModal"], {
@@ -6560,7 +6584,7 @@ function JournalTracker() {
                 task: editingTask
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 692,
+                lineNumber: 720,
                 columnNumber: 9
             }, this),
             deletingTask && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$DeleteConfirmModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DeleteConfirmModal"], {
@@ -6570,7 +6594,7 @@ function JournalTracker() {
                 taskName: deletingTask.text
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 701,
+                lineNumber: 729,
                 columnNumber: 9
             }, this),
             assignModalTask && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$TaskAssignmentModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TaskAssignmentModal"], {
@@ -6581,13 +6605,13 @@ function JournalTracker() {
                 baselineDuration: assignModalTask.baselineDuration
             }, void 0, false, {
                 fileName: "[project]/src/pages-old/JournalTracker.tsx",
-                lineNumber: 710,
+                lineNumber: 738,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/pages-old/JournalTracker.tsx",
-        lineNumber: 569,
+        lineNumber: 597,
         columnNumber: 5
     }, this);
 }

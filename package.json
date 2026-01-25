@@ -1,12 +1,11 @@
 {
-  "name": "magic-patterns-vite-template",
-  "version": "0.0.1",
+  "name": "tasky",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "start": "next start"
   },
   "dependencies": {
