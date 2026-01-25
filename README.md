@@ -6,13 +6,13 @@ A beautiful, journal-style task tracking and management application built with N
 
 ## Features
 
-- ** Week & Month Views** - Navigate your tasks with intuitive weekly and monthly calendar views
-- ** Recurring Tasks** - Set up tasks that repeat on specific days of the week
-- ** Statistics Dashboard** - Track your productivity with completion rates, streaks, and trends
-- ** Quick Complete** - Mark individual tasks or entire days as complete with one click
-- ** Days Off** - Mark rest days to exclude them from your statistics
-- ** Task Library** - Manage your task templates in a draggable sidebar
-- ** Beautiful Design** - Hand-crafted journal-style aesthetic with smooth animations
+- **Week & Month Views** - Navigate your tasks with intuitive weekly and monthly calendar views
+- **Recurring Tasks** - Set up tasks that repeat on specific days of the week
+- **Statistics Dashboard** - Track your productivity with completion rates, streaks, and trends
+- **Quick Complete** - Mark individual tasks or entire days as complete with one click
+- **Days Off** - Mark rest days to exclude them from your statistics
+- **Task Library** - Manage your task templates in a draggable sidebar
+- **Beautiful Design** - Hand-crafted journal-style aesthetic with smooth animations
 
 ## Tech Stack
 
