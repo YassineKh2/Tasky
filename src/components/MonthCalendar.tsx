@@ -4,6 +4,24 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, CheckSquare, Coffee } from "lucide-react";
 import { DayData } from "./DayCard";
+import { DayDetailsModal } from "./DayDetailsModal";
+interface TaskDefinition {
+  id: string;
+  text: string;
+  description?: string;
+  baselineDuration: number;
+  isRecurring: boolean;
+  recurringDays: number[];
+}
+
+interface TaskAssignment {
+  id: string;
+  taskId: string;
+  dateStr: string;
+  durationOverride?: number;
+  completed: boolean;
+}
+
 interface MonthCalendarProps {
   currentDate: Date;
   days: DayData[];
@@ -12,6 +30,9 @@ interface MonthCalendarProps {
   onToggleSelectDay: (dayId: string) => void;
   isSelectMode: boolean;
   onToggleSelectMode: () => void;
+  taskDefinitions: TaskDefinition[];
+  assignments: TaskAssignment[];
+  daysOff: string[];
 }
 export function MonthCalendar({
   currentDate,
@@ -21,11 +42,15 @@ export function MonthCalendar({
   onToggleSelectDay,
   isSelectMode,
   onToggleSelectMode,
+  taskDefinitions,
+  assignments,
+  daysOff,
 }: MonthCalendarProps) {
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null,
   );
+  const [viewingDayStr, setViewingDayStr] = useState<string | null>(null);
   const STATS_START_DATE = "2026-01-01";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -111,6 +136,8 @@ export function MonthCalendar({
         setLastSelectedIndex(dayIndex);
       }
     } else {
+      // Show day details modal
+      setViewingDayStr(dayId);
       onDayClick(dayId);
     }
   };
@@ -311,6 +338,16 @@ export function MonthCalendar({
           to select multiple days
         </motion.div>
       )}
+
+      {/* Day Details Modal */}
+      <DayDetailsModal
+        isOpen={!!viewingDayStr}
+        onClose={() => setViewingDayStr(null)}
+        dateStr={viewingDayStr}
+        taskDefinitions={taskDefinitions}
+        assignments={assignments.filter((a) => a.dateStr === viewingDayStr)}
+        isRestDay={!!viewingDayStr && daysOff.includes(viewingDayStr)}
+      />
     </motion.div>
   );
 }

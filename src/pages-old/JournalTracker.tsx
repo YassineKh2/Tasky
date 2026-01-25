@@ -641,6 +641,9 @@ export function JournalTracker() {
                 setIsSelectMode(!isSelectMode);
                 setSelectedDays([]);
               }}
+              taskDefinitions={taskDefinitions}
+              assignments={allAssignments}
+              daysOff={daysOff}
             />
           ) : (
             <StatsPanel

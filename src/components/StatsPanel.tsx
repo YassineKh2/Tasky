@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, XCircle, TrendingUp, Flame, Trophy } from "lucide-react";
+import { Clock, CheckCircle2, TrendingUp, Flame, Trophy } from "lucide-react";
 import { StatCard } from "./StatCard";
 import { TaskStatsCard } from "./TaskStatsCard";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { CompletionTrendChart } from "./CompletionTrendChart";
 import { TaskDistributionChart } from "./TaskDistributionChart";
+import { DayDetailsModal } from "./DayDetailsModal";
 
 interface TaskDefinition {
   id: string;
@@ -34,6 +36,8 @@ export function StatsPanel({
   assignments,
   daysOff,
 }: StatsPanelProps) {
+  const [selectedDayStr, setSelectedDayStr] = useState<string | null>(null);
+
   // Helper to get local date string (YYYY-MM-DD)
   const getLocalDateStr = (date: Date): string => {
     const year = date.getFullYear();
@@ -53,7 +57,7 @@ export function StatsPanel({
     let globalTotalMinutes = 0;
     
     // Data structures for charts
-    const heatmapData: { date: string; count: number; level: number }[] = [];
+    const heatmapData: { date: string; count: number; missed: number; level: number }[] = [];
     const dailyStats = new Map<string, { completed: number; missed: number }>();
     const taskCompletionCounts = new Map<string, number>();
 
@@ -78,7 +82,7 @@ export function StatsPanel({
 
     // Iterate day by day from start date to today
     const current = new Date(statsStartDate);
-    const dayStatsList: { date: Date; allCompleted: boolean; hasTasks: boolean }[] = [];
+    const dayStatsList: { date: Date; allCompleted: boolean; hasTasks: boolean; isRestDay: boolean }[] = [];
 
     while (current <= today) {
       const dateStr = getLocalDateStr(current);
@@ -86,7 +90,12 @@ export function StatsPanel({
       
       // Skip if marked as rest day
       if (daysOff.includes(dateStr)) {
-        dayStatsList.push({ date: new Date(current), allCompleted: false, hasTasks: false });
+        dayStatsList.push({ 
+          date: new Date(current), 
+          allCompleted: false, 
+          hasTasks: false, 
+          isRestDay: true 
+        });
         current.setDate(current.getDate() + 1);
         continue;
       }
@@ -147,23 +156,31 @@ export function StatsPanel({
           globalMissedDays++;
         }
 
-        dayStatsList.push({ date: new Date(current), allCompleted: allDayTasksCompleted, hasTasks: true });
+        dayStatsList.push({ 
+          date: new Date(current), 
+          allCompleted: allDayTasksCompleted, 
+          hasTasks: true,
+          isRestDay: false
+        });
       } else {
-        dayStatsList.push({ date: new Date(current), allCompleted: false, hasTasks: false });
+        dayStatsList.push({ 
+          date: new Date(current), 
+          allCompleted: false, 
+          hasTasks: false,
+          isRestDay: false 
+        });
       }
 
       // Populate Chart Data
-      // Heatmap level logic (0-4)
+      // Heatmap level logic (0-4) based on absolute count
       let level = 0;
       if (dailyCompletedCount > 0) {
-         const total = dailyCompletedCount + dailyMissedCount;
-         const ratio = dailyCompletedCount / total;
-         if (ratio === 1) level = 4;
-         else if (ratio >= 0.75) level = 3;
-         else if (ratio >= 0.5) level = 2;
+         if (dailyCompletedCount >= 7) level = 4;
+         else if (dailyCompletedCount >= 5) level = 3;
+         else if (dailyCompletedCount >= 3) level = 2;
          else level = 1;
       }
-      heatmapData.push({ date: dateStr, count: dailyCompletedCount, level });
+      heatmapData.push({ date: dateStr, count: dailyCompletedCount, missed: dailyMissedCount, level });
       
       // Daily stats for trends
       dailyStats.set(dateStr, { completed: dailyCompletedCount, missed: dailyMissedCount });
@@ -178,25 +195,26 @@ export function StatsPanel({
     let tempStreak = 0;
 
     // Iterate backwards for current streak
+    // Iterate backwards for current streak
     for (let i = dayStatsList.length - 1; i >= 0; i--) {
         const stat = dayStatsList[i];
-        if (stat.hasTasks) {
-            if (stat.allCompleted) {
+        
+        // Check if day relates to streak (tasks assigned OR rest day)
+        if (stat.hasTasks || stat.isRestDay) {
+            // Completed if tasks done OR it is a rest day
+            if (stat.allCompleted || stat.isRestDay) {
                 currentStreak++;
             } else {
                 break;
             }
         }
-        // If no tasks (e.g. rest day or empty day), we might confirm if it breaks streak
-        // "if a day is marked as rest it doesn't count as missed" -> implies it maintains streak?
-        // Let's assume rest days maintain streak but don't increment it? Or just don't break it.
-        // Implementation: If !hasTasks (rest day), continue without breaking, but don't increment.
+        // If empty day (no tasks, not rest day), preserve streak (do not break, do not increment)
     }
 
     // Iterate forwards for longest streak
     for (const stat of dayStatsList) {
-        if (stat.hasTasks) {
-            if (stat.allCompleted) {
+        if (stat.hasTasks || stat.isRestDay) {
+            if (stat.allCompleted || stat.isRestDay) {
                 tempStreak++;
             } else {
                 longestStreak = Math.max(longestStreak, tempStreak);
@@ -287,14 +305,14 @@ export function StatsPanel({
           label="Current Streak"
           value={globalStats.currentStreak}
           icon={Flame}
-          subtitle="Days in a row"
+          subtitle="Days in a row (including rest days)"
           index={0}
         />
         <StatCard
           label="Longest Streak"
           value={globalStats.longestStreak}
           icon={Trophy}
-          subtitle="All time best"
+          subtitle="All time best (including rest days)"
           index={1}
         />
         <StatCard
@@ -314,7 +332,20 @@ export function StatsPanel({
       </div>
 
       {/* Heatmap Section */}
-      <ActivityHeatmap data={charts.heatmapData} />
+      <ActivityHeatmap 
+        data={charts.heatmapData} 
+        daysOff={daysOff} 
+        onDayClick={setSelectedDayStr}
+      />
+
+      <DayDetailsModal 
+        isOpen={!!selectedDayStr}
+        onClose={() => setSelectedDayStr(null)}
+        dateStr={selectedDayStr}
+        taskDefinitions={taskDefinitions}
+        assignments={assignments.filter(a => a.dateStr === selectedDayStr)}
+        isRestDay={!!selectedDayStr && daysOff.includes(selectedDayStr)}
+      />
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

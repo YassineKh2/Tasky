@@ -3717,140 +3717,370 @@ __turbopack_context__.s([
     ()=>ActivityHeatmap
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-ssr] (ecmascript)");
 ;
-function ActivityHeatmap({ data }) {
-    // Generate last 365 days
-    const today = new Date();
+;
+;
+function ActivityHeatmap({ data, daysOff, onDayClick }) {
+    const [hoveredData, setHoveredData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
+    // Generate a full year (52 weeks) starting from Jan 1st 2026
+    const START_DATE = new Date("2026-01-01");
     const dates = [];
-    for(let i = 364; i >= 0; i--){
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        dates.push(d);
+    // We want to fill 52 columns * 7 rows = 364 days
+    // Or simply fill until the end of 2026 to look complete
+    const END_DATE = new Date("2026-12-31");
+    const current = new Date(START_DATE);
+    while(current <= END_DATE){
+        dates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
     }
-    const getColor = (level)=>{
+    // Determine starting offset to align days correctly (Sunday = 0)
+    const startDay = START_DATE.getDay();
+    // We need to pad the beginning so the first day aligns with the correct row
+    const paddedDates = Array(startDay).fill(null).concat(dates);
+    // Group into weeks (columns)
+    const weeks = [];
+    let currentWeek = [];
+    paddedDates.forEach((date)=>{
+        currentWeek.push(date);
+        if (currentWeek.length === 7) {
+            weeks.push(currentWeek);
+            currentWeek = [];
+        }
+    });
+    // Push remaining partial week
+    if (currentWeek.length > 0) {
+        while(currentWeek.length < 7){
+            currentWeek.push(null);
+        }
+        weeks.push(currentWeek);
+    }
+    const getColor = (level, isRestDay, isFuture, missed)=>{
+        if (isFuture) return "bg-[#E5E7EB] border-transparent"; // Future: Cool Gray
+        if (isRestDay) return "bg-[#A69B8F] opacity-80"; // Rest Day: Taupe
+        if (missed > 0) return "bg-[#D97757]"; // Missed: Rust Red
         switch(level){
             case 0:
                 return "bg-[#FFFBF5]";
             case 1:
-                return "bg-[#F5EDD9]";
+                return "bg-[#F0E0C0]"; // More visible Level 1
             case 2:
-                return "bg-[#E8DCC4]";
+                return "bg-[#E0C595]"; // Level 2
             case 3:
-                return "bg-[#D4C4B0]";
+                return "bg-[#C0A070]"; // Level 3
             case 4:
-                return "bg-[#C0B09C]";
+                return "bg-[#8F7045]"; // Level 4 (Darkest)
             default:
                 return "bg-[#FFFBF5]";
         }
     };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const handleMouseEnter = (e, date, count, missed, isRestDay, isFuture)=>{
+        const rect = e.currentTarget.getBoundingClientRect();
+        setHoveredData({
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+            date,
+            count,
+            missed,
+            isRestDay,
+            isFuture
+        });
+    };
+    const handleMouseLeave = ()=>{
+        setHoveredData(null);
+    };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "bg-white p-6 rounded-lg border border-[#E8DCC4] shadow-sm",
+        className: "bg-white p-6 rounded-lg border border-[#E8DCC4] shadow-sm relative",
         children: [
-            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
-                className: "font-serif-text text-lg font-bold text-[#8B7355] mb-4 uppercase tracking-wider",
-                children: "Activity Log"
-            }, void 0, false, {
-                fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                lineNumber: 31,
-                columnNumber: 7
-            }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "flex gap-1 overflow-x-auto pb-2",
-                children: Array.from({
-                    length: 53
-                }).map((_, weekIndex)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex flex-col gap-1",
-                        children: Array.from({
-                            length: 7
-                        }).map((_, dayIndex)=>{
-                            const dateIndex = weekIndex * 7 + dayIndex;
-                            if (dateIndex >= dates.length) return null;
-                            const date = dates[dateIndex];
-                            const dateStr = date.toISOString().split('T')[0];
-                            const dayData = data.find((d)=>d.date === dateStr);
-                            const level = dayData ? dayData.level : 0;
-                            const count = dayData ? dayData.count : 0;
-                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: `w-3 h-3 rounded-sm ${getColor(level)} border border-[#E8DCC4]/30`,
-                                title: `${dateStr}: ${count} tasks completed`
-                            }, dateStr, false, {
-                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                                lineNumber: 48,
-                                columnNumber: 17
-                            }, this);
-                        })
-                    }, weekIndex, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 36,
-                        columnNumber: 11
-                    }, this))
-            }, void 0, false, {
-                fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                lineNumber: 34,
-                columnNumber: 7
-            }, this),
-            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "flex items-center gap-2 mt-4 text-xs text-[#8B7355] justify-end font-serif-text",
+                className: "flex justify-between items-center mb-4",
                 children: [
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                        children: "Less"
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                        className: "font-serif-text text-lg font-bold text-[#8B7355] uppercase tracking-wider",
+                        children: "Activity Log"
                     }, void 0, false, {
                         fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 59,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-3 h-3 bg-[#FFFBF5] border border-[#E8DCC4]/30 rounded-sm"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 60,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-3 h-3 bg-[#F5EDD9] border border-[#E8DCC4]/30 rounded-sm"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 61,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-3 h-3 bg-[#E8DCC4] border border-[#E8DCC4]/30 rounded-sm"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 62,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-3 h-3 bg-[#D4C4B0] border border-[#E8DCC4]/30 rounded-sm"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 63,
-                        columnNumber: 9
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-3 h-3 bg-[#C0B09C] border border-[#E8DCC4]/30 rounded-sm"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 64,
+                        lineNumber: 100,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                        children: "More"
+                        className: "text-xs font-serif-text text-[#8B7355] italic",
+                        children: "2026"
                     }, void 0, false, {
                         fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                        lineNumber: 65,
+                        lineNumber: 103,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/ActivityHeatmap.tsx",
-                lineNumber: 58,
+                lineNumber: 99,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "overflow-x-auto pb-4 custom-scrollbar",
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "flex gap-1 min-w-max",
+                    children: weeks.map((week, weekIndex)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "flex flex-col gap-1",
+                            children: week.map((date, dayIndex)=>{
+                                if (!date) {
+                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "w-3 h-3"
+                                    }, `empty-${weekIndex}-${dayIndex}`, false, {
+                                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                        lineNumber: 115,
+                                        columnNumber: 26
+                                    }, this);
+                                }
+                                const dateStr = date.toISOString().split('T')[0];
+                                const dayData = data.find((d)=>d.date === dateStr);
+                                const level = dayData ? dayData.level : 0;
+                                const count = dayData ? dayData.count : 0;
+                                const missed = dayData?.missed || 0;
+                                const isRestDay = daysOff.includes(dateStr);
+                                const isFuture = date > today;
+                                const formattedDate = date.toLocaleDateString("en-US", {
+                                    weekday: 'short',
+                                    month: "short",
+                                    day: "numeric"
+                                });
+                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    onClick: ()=>onDayClick?.(dateStr),
+                                    onMouseEnter: (e)=>handleMouseEnter(e, formattedDate, count, missed, isRestDay, isFuture),
+                                    onMouseLeave: handleMouseLeave,
+                                    className: `w-3 h-3 rounded-sm border border-[#E8DCC4]/50 transition-all hover:scale-125 hover:z-10 relative cursor-pointer ${getColor(level, isRestDay, isFuture, missed)}`
+                                }, dateStr, false, {
+                                    fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                    lineNumber: 129,
+                                    columnNumber: 19
+                                }, this);
+                            })
+                        }, weekIndex, false, {
+                            fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                            lineNumber: 112,
+                            columnNumber: 13
+                        }, this))
+                }, void 0, false, {
+                    fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                    lineNumber: 110,
+                    columnNumber: 9
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                lineNumber: 109,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AnimatePresence"], {
+                children: hoveredData && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
+                    initial: {
+                        opacity: 0,
+                        scale: 0.9
+                    },
+                    animate: {
+                        opacity: 1,
+                        scale: 1
+                    },
+                    exit: {
+                        opacity: 0,
+                        scale: 0.9
+                    },
+                    style: {
+                        position: 'fixed',
+                        left: hoveredData.x,
+                        top: hoveredData.y - 8,
+                        x: "-50%",
+                        y: "-100%",
+                        zIndex: 1000,
+                        pointerEvents: 'none'
+                    },
+                    className: "fixed bg-[#FFFBF5] border border-[#E8DCC4] shadow-lg rounded-lg px-3 py-2 text-xs whitespace-nowrap z-50 pointer-events-none",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "font-bold text-[#2C2416] mb-0.5",
+                            children: hoveredData.date
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                            lineNumber: 161,
+                            columnNumber: 13
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "text-[#8B7355] italic",
+                            children: hoveredData.isFuture ? "Upcoming" : hoveredData.isRestDay ? "Rest Day" : hoveredData.missed > 0 ? `${hoveredData.missed} tasks missed` : `${hoveredData.count} tasks completed`
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                            lineNumber: 162,
+                            columnNumber: 13
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-[#FFFBF5] border-r border-b border-[#E8DCC4]"
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                            lineNumber: 169,
+                            columnNumber: 13
+                        }, this)
+                    ]
+                }, void 0, true, {
+                    fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                    lineNumber: 146,
+                    columnNumber: 11
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                lineNumber: 144,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex flex-wrap items-center gap-4 mt-2 justify-end",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 rounded-sm bg-[#E5E7EB] border border-[#E8DCC4]/30"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 176,
+                                columnNumber: 12
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "Upcoming"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 177,
+                                columnNumber: 12
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                        lineNumber: 175,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 rounded-sm bg-[#A69B8F] opacity-80 border border-[#E8DCC4]/30"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 180,
+                                columnNumber: 12
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "Rest"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 181,
+                                columnNumber: 12
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                        lineNumber: 179,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 rounded-sm bg-[#D97757] border border-[#E8DCC4]/30"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 184,
+                                columnNumber: 12
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "Missed"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 185,
+                                columnNumber: 12
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                        lineNumber: 183,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "h-3 w-px bg-[#E8DCC4]"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                        lineNumber: 187,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-1 text-xs text-[#8B7355] font-serif-text",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "Less"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 189,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 bg-[#FFFBF5] border border-[#E8DCC4]/30 rounded-sm"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 190,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 bg-[#F0E0C0] border border-[#E8DCC4]/30 rounded-sm"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 191,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 bg-[#E0C595] border border-[#E8DCC4]/30 rounded-sm"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 192,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 bg-[#C0A070] border border-[#E8DCC4]/30 rounded-sm"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 193,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "w-3 h-3 bg-[#8F7045] border border-[#E8DCC4]/30 rounded-sm"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 194,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                children: "More"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                                lineNumber: 195,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                        lineNumber: 188,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/src/components/ActivityHeatmap.tsx",
+                lineNumber: 174,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/ActivityHeatmap.tsx",
-        lineNumber: 30,
+        lineNumber: 98,
         columnNumber: 5
     }, this);
 }
@@ -3863,6 +4093,7 @@ __turbopack_context__.s([
     ()=>CompletionTrendChart
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$ResponsiveContainer$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/component/ResponsiveContainer.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$chart$2f$AreaChart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/chart/AreaChart.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$Area$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/cartesian/Area.js [app-ssr] (ecmascript)");
@@ -3870,190 +4101,292 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$YAxis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/cartesian/YAxis.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$CartesianGrid$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/cartesian/CartesianGrid.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$Tooltip$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/recharts/es6/component/Tooltip.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$left$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronLeft$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/chevron-left.js [app-ssr] (ecmascript) <export default as ChevronLeft>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$right$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronRight$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/chevron-right.js [app-ssr] (ecmascript) <export default as ChevronRight>");
+;
+;
 ;
 ;
 function CompletionTrendChart({ data }) {
+    // Show 7 days at a time. Default to showing the last 7 days of the dataset.
+    const DAYS_TO_SHOW = 7;
+    const [startIndex, setStartIndex] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(Math.max(0, data.length - DAYS_TO_SHOW));
+    // Update startIndex when data changes (e.g. if new data arrives)
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        setStartIndex(Math.max(0, data.length - DAYS_TO_SHOW));
+    }, [
+        data.length
+    ]); // Depend on length to reset to end
+    const visibleData = data.slice(startIndex, startIndex + DAYS_TO_SHOW);
+    const canGoBack = startIndex > 0;
+    const canGoForward = startIndex + DAYS_TO_SHOW < data.length;
+    const handlePrev = ()=>{
+        if (canGoBack) {
+            setStartIndex(Math.max(0, startIndex - DAYS_TO_SHOW)); // Jump by week
+        }
+    };
+    const handleNext = ()=>{
+        if (canGoForward) {
+            setStartIndex(Math.min(data.length - DAYS_TO_SHOW, startIndex + DAYS_TO_SHOW));
+        }
+    };
+    // derived date range string
+    const startStr = visibleData[0]?.date || "";
+    const endStr = visibleData[visibleData.length - 1]?.date || "";
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "bg-white p-6 rounded-lg border border-[#E8DCC4] shadow-sm h-80",
+        className: "bg-white p-6 rounded-lg border border-[#E8DCC4] shadow-sm h-80 flex flex-col",
         children: [
-            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
-                className: "font-serif-text text-lg font-bold text-[#8B7355] mb-4 uppercase tracking-wider",
-                children: "Weekly Trends"
-            }, void 0, false, {
-                fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                lineNumber: 10,
-                columnNumber: 7
-            }, this),
-            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$ResponsiveContainer$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ResponsiveContainer"], {
-                width: "100%",
-                height: "100%",
-                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$chart$2f$AreaChart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AreaChart"], {
-                    data: data,
-                    margin: {
-                        top: 10,
-                        right: 30,
-                        left: 0,
-                        bottom: 0
-                    },
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("defs", {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
-                                    id: "colorCompleted",
-                                    x1: "0",
-                                    y1: "0",
-                                    x2: "0",
-                                    y2: "1",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
-                                            offset: "5%",
-                                            stopColor: "#2C2416",
-                                            stopOpacity: 0.1
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                            lineNumber: 17,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
-                                            offset: "95%",
-                                            stopColor: "#2C2416",
-                                            stopOpacity: 0
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                            lineNumber: 18,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex justify-between items-center mb-4",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                        className: "font-serif-text text-lg font-bold text-[#8B7355] uppercase tracking-wider",
+                        children: "Weekly Trends"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                        lineNumber: 42,
+                        columnNumber: 9
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "flex items-center gap-2 bg-[#FFFBF5] rounded-lg border border-[#E8DCC4] px-1 py-1",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: handlePrev,
+                                disabled: !canGoBack,
+                                className: `p-1 rounded-md transition-colors ${!canGoBack ? "text-[#E8DCC4] cursor-not-allowed" : "text-[#8B7355] hover:bg-[#E8DCC4]/30 hover:text-[#2C2416]"}`,
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$left$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronLeft$3e$__["ChevronLeft"], {
+                                    className: "w-4 h-4"
+                                }, void 0, false, {
                                     fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                    lineNumber: 16,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
-                                    id: "colorMissed",
-                                    x1: "0",
-                                    y1: "0",
-                                    x2: "0",
-                                    y2: "1",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
-                                            offset: "5%",
-                                            stopColor: "#ef4444",
-                                            stopOpacity: 0.1
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                            lineNumber: 21,
-                                            columnNumber: 15
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
-                                            offset: "95%",
-                                            stopColor: "#ef4444",
-                                            stopOpacity: 0
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                            lineNumber: 22,
-                                            columnNumber: 15
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                                    lineNumber: 20,
+                                    lineNumber: 52,
                                     columnNumber: 13
                                 }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 15,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$XAxis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["XAxis"], {
-                            dataKey: "date",
-                            tick: {
-                                fill: '#8B7355',
-                                fontSize: 12,
-                                fontFamily: 'serif'
-                            },
-                            tickLine: false,
-                            axisLine: false
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 25,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$YAxis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["YAxis"], {
-                            tick: {
-                                fill: '#8B7355',
-                                fontSize: 12,
-                                fontFamily: 'serif'
-                            },
-                            tickLine: false,
-                            axisLine: false
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 31,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$CartesianGrid$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CartesianGrid"], {
-                            vertical: false,
-                            stroke: "#E8DCC4",
-                            strokeDasharray: "3 3"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 36,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$Tooltip$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Tooltip"], {
-                            contentStyle: {
-                                backgroundColor: '#FFFBF5',
-                                borderColor: '#E8DCC4',
-                                borderRadius: '8px',
-                                fontFamily: 'serif',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                            }
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 37,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$Area$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Area"], {
-                            type: "monotone",
-                            dataKey: "completed",
-                            stroke: "#2C2416",
-                            fillOpacity: 1,
-                            fill: "url(#colorCompleted)",
-                            name: "Tasks Completed"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 46,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$Area$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Area"], {
-                            type: "monotone",
-                            dataKey: "missed",
-                            stroke: "#ef4444",
-                            fillOpacity: 1,
-                            fill: "url(#colorMissed)",
-                            name: "Tasks Missed"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                            lineNumber: 54,
-                            columnNumber: 11
-                        }, this)
-                    ]
-                }, void 0, true, {
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 47,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "font-serif-text text-xs text-[#8B7355] min-w-[100px] text-center font-medium",
+                                children: [
+                                    startStr,
+                                    " - ",
+                                    endStr
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 55,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: handleNext,
+                                disabled: !canGoForward,
+                                className: `p-1 rounded-md transition-colors ${!canGoForward ? "text-[#E8DCC4] cursor-not-allowed" : "text-[#8B7355] hover:bg-[#E8DCC4]/30 hover:text-[#2C2416]"}`,
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$right$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronRight$3e$__["ChevronRight"], {
+                                    className: "w-4 h-4"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                    lineNumber: 64,
+                                    columnNumber: 13
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 59,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                        lineNumber: 46,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                lineNumber: 41,
+                columnNumber: 7
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "flex-1 min-h-0",
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$ResponsiveContainer$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ResponsiveContainer"], {
+                    width: "100%",
+                    height: "100%",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$chart$2f$AreaChart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AreaChart"], {
+                        data: visibleData,
+                        margin: {
+                            top: 10,
+                            right: 10,
+                            left: 0,
+                            bottom: 30
+                        },
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("defs", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
+                                        id: "colorCompleted",
+                                        x1: "0",
+                                        y1: "0",
+                                        x2: "0",
+                                        y2: "1",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
+                                                offset: "5%",
+                                                stopColor: "#2C2416",
+                                                stopOpacity: 0.1
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                                lineNumber: 74,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
+                                                offset: "95%",
+                                                stopColor: "#2C2416",
+                                                stopOpacity: 0
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                                lineNumber: 75,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                        lineNumber: 73,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
+                                        id: "colorMissed",
+                                        x1: "0",
+                                        y1: "0",
+                                        x2: "0",
+                                        y2: "1",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
+                                                offset: "5%",
+                                                stopColor: "#ef4444",
+                                                stopOpacity: 0.1
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                                lineNumber: 78,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
+                                                offset: "95%",
+                                                stopColor: "#ef4444",
+                                                stopOpacity: 0
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                                lineNumber: 79,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                        lineNumber: 77,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 72,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$XAxis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["XAxis"], {
+                                dataKey: "date",
+                                tick: {
+                                    fill: '#8B7355',
+                                    fontSize: 12,
+                                    fontFamily: 'serif'
+                                },
+                                tickLine: false,
+                                axisLine: false,
+                                interval: 0
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 82,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$YAxis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["YAxis"], {
+                                tick: {
+                                    fill: '#8B7355',
+                                    fontSize: 12,
+                                    fontFamily: 'serif'
+                                },
+                                tickLine: false,
+                                axisLine: false,
+                                allowDecimals: false
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 89,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$CartesianGrid$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CartesianGrid"], {
+                                vertical: false,
+                                stroke: "#E8DCC4",
+                                strokeDasharray: "3 3"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 95,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$Tooltip$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Tooltip"], {
+                                contentStyle: {
+                                    backgroundColor: '#FFFBF5',
+                                    borderColor: '#E8DCC4',
+                                    borderRadius: '8px',
+                                    fontFamily: 'serif',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                }
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 96,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$Area$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Area"], {
+                                type: "monotone",
+                                dataKey: "completed",
+                                stroke: "#2C2416",
+                                fillOpacity: 1,
+                                fill: "url(#colorCompleted)",
+                                name: "Tasks Completed",
+                                animationDuration: 500
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 105,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$cartesian$2f$Area$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Area"], {
+                                type: "monotone",
+                                dataKey: "missed",
+                                stroke: "#ef4444",
+                                fillOpacity: 1,
+                                fill: "url(#colorMissed)",
+                                name: "Tasks Missed",
+                                animationDuration: 500
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                                lineNumber: 114,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/CompletionTrendChart.tsx",
+                        lineNumber: 71,
+                        columnNumber: 11
+                    }, this)
+                }, void 0, false, {
                     fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                    lineNumber: 14,
+                    lineNumber: 70,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/CompletionTrendChart.tsx",
-                lineNumber: 13,
+                lineNumber: 69,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/CompletionTrendChart.tsx",
-        lineNumber: 9,
+        lineNumber: 40,
         columnNumber: 5
     }, this);
 }
@@ -4105,7 +4438,7 @@ function TaskDistributionChart({ data }) {
                             outerRadius: 80,
                             paddingAngle: 5,
                             dataKey: "value",
-                            children: data.map((entry, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$Cell$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Cell"], {
+                            children: data.map((_, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$recharts$2f$es6$2f$component$2f$Cell$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Cell"], {
                                     fill: COLORS[index % COLORS.length]
                                 }, `cell-${index}`, false, {
                                     fileName: "[project]/src/components/TaskDistributionChart.tsx",
@@ -4231,7 +4564,8 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                 dayStatsList.push({
                     date: new Date(current),
                     allCompleted: false,
-                    hasTasks: false
+                    hasTasks: false,
+                    isRestDay: true
                 });
                 current.setDate(current.getDate() + 1);
                 continue;
@@ -4282,29 +4616,30 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                 dayStatsList.push({
                     date: new Date(current),
                     allCompleted: allDayTasksCompleted,
-                    hasTasks: true
+                    hasTasks: true,
+                    isRestDay: false
                 });
             } else {
                 dayStatsList.push({
                     date: new Date(current),
                     allCompleted: false,
-                    hasTasks: false
+                    hasTasks: false,
+                    isRestDay: false
                 });
             }
             // Populate Chart Data
-            // Heatmap level logic (0-4)
+            // Heatmap level logic (0-4) based on absolute count
             let level = 0;
             if (dailyCompletedCount > 0) {
-                const total = dailyCompletedCount + dailyMissedCount;
-                const ratio = dailyCompletedCount / total;
-                if (ratio === 1) level = 4;
-                else if (ratio >= 0.75) level = 3;
-                else if (ratio >= 0.5) level = 2;
+                if (dailyCompletedCount >= 7) level = 4;
+                else if (dailyCompletedCount >= 5) level = 3;
+                else if (dailyCompletedCount >= 3) level = 2;
                 else level = 1;
             }
             heatmapData.push({
                 date: dateStr,
                 count: dailyCompletedCount,
+                missed: dailyMissedCount,
                 level
             });
             // Daily stats for trends
@@ -4320,24 +4655,24 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
         let longestStreak = 0;
         let tempStreak = 0;
         // Iterate backwards for current streak
+        // Iterate backwards for current streak
         for(let i = dayStatsList.length - 1; i >= 0; i--){
             const stat = dayStatsList[i];
-            if (stat.hasTasks) {
-                if (stat.allCompleted) {
+            // Check if day relates to streak (tasks assigned OR rest day)
+            if (stat.hasTasks || stat.isRestDay) {
+                // Completed if tasks done OR it is a rest day
+                if (stat.allCompleted || stat.isRestDay) {
                     currentStreak++;
                 } else {
                     break;
                 }
             }
-        // If no tasks (e.g. rest day or empty day), we might confirm if it breaks streak
-        // "if a day is marked as rest it doesn't count as missed" -> implies it maintains streak?
-        // Let's assume rest days maintain streak but don't increment it? Or just don't break it.
-        // Implementation: If !hasTasks (rest day), continue without breaking, but don't increment.
+        // If empty day (no tasks, not rest day), preserve streak (do not break, do not increment)
         }
         // Iterate forwards for longest streak
         for (const stat of dayStatsList){
-            if (stat.hasTasks) {
-                if (stat.allCompleted) {
+            if (stat.hasTasks || stat.isRestDay) {
+                if (stat.allCompleted || stat.isRestDay) {
                     tempStreak++;
                 } else {
                     longestStreak = Math.max(longestStreak, tempStreak);
@@ -4419,7 +4754,7 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         children: "Your Progress"
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 275,
+                        lineNumber: 289,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4427,20 +4762,20 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         children: "Keep building those habits!"
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 278,
+                        lineNumber: 292,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-px w-32 mx-auto bg-[#E8DCC4] mt-2"
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 281,
+                        lineNumber: 295,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/StatsPanel.tsx",
-                lineNumber: 274,
+                lineNumber: 288,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4450,22 +4785,22 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         label: "Current Streak",
                         value: globalStats.currentStreak,
                         icon: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$flame$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Flame$3e$__["Flame"],
-                        subtitle: "Days in a row",
+                        subtitle: "Days in a row (including rest days)",
                         index: 0
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 286,
+                        lineNumber: 300,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$StatCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["StatCard"], {
                         label: "Longest Streak",
                         value: globalStats.longestStreak,
                         icon: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trophy$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Trophy$3e$__["Trophy"],
-                        subtitle: "All time best",
+                        subtitle: "All time best (including rest days)",
                         index: 1
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 293,
+                        lineNumber: 307,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$StatCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["StatCard"], {
@@ -4476,7 +4811,7 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         index: 2
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 300,
+                        lineNumber: 314,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$StatCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["StatCard"], {
@@ -4487,20 +4822,21 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         index: 3
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 307,
+                        lineNumber: 321,
                         columnNumber: 10
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/StatsPanel.tsx",
-                lineNumber: 285,
+                lineNumber: 299,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ActivityHeatmap$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ActivityHeatmap"], {
-                data: charts.heatmapData
+                data: charts.heatmapData,
+                daysOff: daysOff
             }, void 0, false, {
                 fileName: "[project]/src/components/StatsPanel.tsx",
-                lineNumber: 317,
+                lineNumber: 331,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4510,20 +4846,20 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                         data: charts.trendData
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 321,
+                        lineNumber: 335,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$TaskDistributionChart$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TaskDistributionChart"], {
                         data: charts.distributionData
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 322,
+                        lineNumber: 336,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/StatsPanel.tsx",
-                lineNumber: 320,
+                lineNumber: 334,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4535,7 +4871,7 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                                 className: "w-5 h-5 text-[#8B7355]"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/StatsPanel.tsx",
-                                lineNumber: 328,
+                                lineNumber: 342,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -4543,13 +4879,13 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                                 children: "Detailed Breakdown"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/StatsPanel.tsx",
-                                lineNumber: 329,
+                                lineNumber: 343,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 327,
+                        lineNumber: 341,
                         columnNumber: 9
                     }, this),
                     taskStats.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4560,7 +4896,7 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                                 children: "No task data yet..."
                             }, void 0, false, {
                                 fileName: "[project]/src/components/StatsPanel.tsx",
-                                lineNumber: 336,
+                                lineNumber: 350,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4568,13 +4904,13 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                                 children: "Complete some tasks to see statistics!"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/StatsPanel.tsx",
-                                lineNumber: 339,
+                                lineNumber: 353,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 335,
+                        lineNumber: 349,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "grid grid-cols-1 lg:grid-cols-2 gap-4",
@@ -4589,24 +4925,24 @@ function StatsPanel({ taskDefinitions, assignments, daysOff }) {
                                 index: index
                             }, index, false, {
                                 fileName: "[project]/src/components/StatsPanel.tsx",
-                                lineNumber: 346,
+                                lineNumber: 360,
                                 columnNumber: 15
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/components/StatsPanel.tsx",
-                        lineNumber: 344,
+                        lineNumber: 358,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/StatsPanel.tsx",
-                lineNumber: 326,
+                lineNumber: 340,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/StatsPanel.tsx",
-        lineNumber: 264,
+        lineNumber: 278,
         columnNumber: 5
     }, this);
 }
