@@ -2,8 +2,6 @@
 
 A beautiful, journal-style task tracking and management application built with Next.js.
 
-![Tasky Screenshot](docs/screenshot.png)
-
 ## Features
 
 - **Week & Month Views** - Navigate your tasks with intuitive weekly and monthly calendar views
