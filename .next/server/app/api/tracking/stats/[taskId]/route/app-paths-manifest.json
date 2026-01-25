@@ -1,0 +1,3 @@
+{
+  "/api/tracking/stats/[taskId]/route": "app/api/tracking/stats/[taskId]/route.js"
+}

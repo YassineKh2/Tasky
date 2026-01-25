@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Task Definition - Templates for recurring or one-off tasks
+model TaskDefinition {
+  id               String             @id @default(cuid())
+  text             String
+  description      String?
+  baselineDuration Int                // in minutes
+  isRecurring      Boolean            @default(false)
+  recurringDays    String             // JSON array of day numbers (0-6), e.g., "[1,2,3,4,5]"
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  assignments      TaskAssignment[]
+  trackingHistory  TaskTracking[]
+}
+
+// Task Assignment - Individual task instances assigned to specific dates
+model TaskAssignment {
+  id                 String         @id @default(cuid())
+  taskId             String
+  task               TaskDefinition @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  dateStr            String         // ISO date format "YYYY-MM-DD"
+  durationOverride   Int?           // in minutes, overrides baselineDuration if set
+  completed          Boolean        @default(false)
+  loggedHours        Float          @default(0) // actual hours logged for this day
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  trackingHistory    TaskTracking[]
+
+  @@index([taskId])
+  @@index([dateStr])
+}
+
+// Day Off - Track days marked as off/incomplete
+model DayOff {
+  id        String   @id @default(cuid())
+  dateStr   String   @unique // ISO date format "YYYY-MM-DD"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Task Tracking - Detailed tracking of task completion and hours
+model TaskTracking {
+  id                 String         @id @default(cuid())
+  assignmentId       String
+  assignment         TaskAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  taskId             String
+  task               TaskDefinition @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  hoursLogged        Float          // hours logged on this specific instance
+  dayCompleted       Boolean        @default(false)
+  totalHours         Float          // cumulative hours for this task definition
+  recurringDays      String?        // JSON array of days task recurs, e.g., "[1,2,3,4,5]"
+  completionDate     DateTime?      // when the task was marked complete
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([assignmentId])
+  @@index([taskId])
+}
