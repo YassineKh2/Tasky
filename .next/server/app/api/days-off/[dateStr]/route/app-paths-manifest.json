@@ -1,3 +1,0 @@
-{
-  "/api/days-off/[dateStr]/route": "app/api/days-off/[dateStr]/route.js"
-}

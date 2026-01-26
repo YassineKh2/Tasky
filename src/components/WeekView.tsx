@@ -10,31 +10,31 @@ interface WeekViewProps {
   onDropTask: (taskId: string, dateStr: string) => void;
   onRemoveTask: (assignmentId: string) => void;
 }
-const variants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 1000 : -1000,
-    opacity: 0,
-    rotateY: direction > 0 ? 45 : -45,
-    scale: 0.95,
-  }),
-  center: {
-    zIndex: 1,
-    x: 0,
-    opacity: 1,
-    rotateY: 0,
-    scale: 1,
-  },
-  exit: (direction: number) => ({
-    zIndex: 0,
-    x: direction < 0 ? 1000 : -1000,
-    opacity: 0,
-    rotateY: direction < 0 ? 45 : -45,
-    scale: 0.95,
-  }),
-};
+// const variants = {
+//   enter: (direction: number) => ({
+//     x: direction > 0 ? 1000 : -1000,
+//     opacity: 0,
+//     rotateY: direction > 0 ? 45 : -45,
+//     scale: 0.95,
+//   }),
+//   center: {
+//     zIndex: 1,
+//     x: 0,
+//     opacity: 1,
+//     rotateY: 0,
+//     scale: 1,
+//   },
+//   exit: (direction: number) => ({
+//     zIndex: 0,
+//     x: direction < 0 ? 1000 : -1000,
+//     opacity: 0,
+//     rotateY: direction < 0 ? 45 : -45,
+//     scale: 0.95,
+//   }),
+// };
 export function WeekView({
   weekData,
-  direction,
+  // direction,
   onToggleTask,
   onToggleDayOff,
   onDurationChange,
