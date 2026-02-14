@@ -55,7 +55,7 @@ export function MonthCalendar({
     null,
   );
   const [viewingDayStr, setViewingDayStr] = useState<string | null>(null);
-  const STATS_START_DATE = "2026-01-01";
+  const STATS_START_DATE = "2026-01-14";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   // Calculate completion level for color coding

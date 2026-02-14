@@ -51,7 +51,7 @@ export function StatsPanel({
   };
 
   const calculateStats = () => {
-    const statsStartDate = new Date("2026-01-01");
+    const statsStartDate = new Date("2026-01-14");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
