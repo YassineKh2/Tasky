@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Circle, Check, Coffee } from "lucide-react";
+import { Star, Circle, Check, Coffee, FileText } from "lucide-react";
 import { TaskItem } from "./TaskItem";
 import { HourLog } from "./HourLog";
 export interface Task {
@@ -30,6 +30,8 @@ interface DayCardProps {
   onDurationChange: (assignmentId: string, duration: number) => void;
   onDropTask: (taskId: string, dateStr: string) => void;
   onRemoveTask?: (assignmentId: string) => void;
+  note?: string;
+  onEditNote?: (dateStr: string) => void;
 }
 export function DayCard({
   day,
@@ -38,6 +40,8 @@ export function DayCard({
   onDurationChange,
   onDropTask,
   onRemoveTask,
+  note,
+  onEditNote,
 }: DayCardProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const handleDragOver = (e: React.DragEvent) => {
@@ -175,6 +179,31 @@ export function DayCard({
           <HourLog logs={day.hourLogs} />
         )}
       </div>
+
+      {/* Note Preview or Edit Button */}
+      {!day.isDayOff && (
+        <div className="mt-2 pt-2 border-t border-[#E8DCC4]/50 relative z-10">
+          {note ? (
+            <button
+              onClick={() => onEditNote?.(day.id)}
+              className="w-full flex items-start gap-2 hover:bg-[#E8DCC4]/20 p-2 rounded transition-colors text-left group"
+            >
+              <FileText className="w-4 h-4 text-[#8F7045] flex-shrink-0 mt-0.5 group-hover:text-[#2C2416]" />
+              <span className="text-xs text-[#8B7355] line-clamp-2 group-hover:text-[#2C2416]">
+                {note}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onEditNote?.(day.id)}
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs text-[#8B7355] hover:text-[#2C2416] hover:bg-[#E8DCC4]/20 rounded transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Add note</span>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="absolute bottom-0 right-0 w-4 h-4 bg-gradient-to-tl from-[#E8DCC4]/40 to-transparent pointer-events-none" />
 

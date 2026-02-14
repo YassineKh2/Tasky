@@ -9,6 +9,7 @@ import { CompleteDayButton } from "../components/CompleteDayButton";
 import { TaskCreationModal } from "../components/TaskCreationModal";
 import { TaskEditModal } from "../components/TaskEditModal";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
+import { DayNoteModal } from "../components/DayNoteModal";
 import { TaskLibrary } from "../components/TaskLibrary";
 import { TaskAssignmentModal } from "../components/TaskAssignmentModal";
 import { BulkActionsBar } from "../components/BulkActionsBar";
@@ -17,6 +18,7 @@ import { StatsPanel } from "../components/StatsPanel";
 import { useTasksAPI, type TaskDefinition } from "../hooks/useTasksAPI";
 import { useAssignmentsAPI } from "../hooks/useAssignmentsAPI";
 import { useDaysOffAPI } from "../hooks/useDaysOffAPI";
+import { useDayNotesAPI } from "../hooks/useDayNotesAPI";
 // Helper to get local date string (fixes timezone offset bug)
 const getLocalDateStr = (date: Date): string => {
   const year = date.getFullYear();
@@ -34,17 +36,18 @@ export function JournalTracker() {
   const [assignModalTask, setAssignModalTask] = useState<TaskDefinition | null>(
     null,
   );
+  const [editingNoteDay, setEditingNoteDay] = useState<string | null>(null);
   // Selection state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
   // API hooks
-  const { 
-    tasks: taskDefinitions, 
+  const {
+    tasks: taskDefinitions,
     fetchTasks,
     createTask,
     updateTask,
-    deleteTask
+    deleteTask,
   } = useTasksAPI();
   const {
     assignments,
@@ -53,12 +56,18 @@ export function JournalTracker() {
     updateAssignment,
     deleteAssignment,
   } = useAssignmentsAPI();
-  const { 
-    daysOff, 
+  const {
+    daysOff,
     getByDateRange: getDaysOffRange,
     markDayOff,
-    unmarkDayOff
+    unmarkDayOff,
   } = useDaysOffAPI();
+  const {
+    notes,
+    getByDateRange: getNotesByDateRange,
+    saveNote,
+    deleteNote,
+  } = useDayNotesAPI();
 
   // Helper to generate recurring task assignments ONLY in UI (not in database)
   const generateRecurringTasksForView = useCallback(
@@ -142,10 +151,17 @@ export function JournalTracker() {
         fetchTasks(),
         getByDateRange(startStr, endStr),
         getDaysOffRange(startStr, endStr),
+        getNotesByDateRange(startStr, endStr),
       ]);
     };
     loadData();
-  }, [currentDate, fetchTasks, getByDateRange, getDaysOffRange]);
+  }, [
+    currentDate,
+    fetchTasks,
+    getByDateRange,
+    getDaysOffRange,
+    getNotesByDateRange,
+  ]);
 
   // Compute assignments with virtual recurring tasks (UI-only)
   const allAssignments = useMemo(() => {
@@ -269,8 +285,7 @@ export function JournalTracker() {
     return generateViewData();
   }, [generateViewData]);
 
-// Hooks already initialized at the top
-
+  // Hooks already initialized at the top
 
   const handleCreateTaskDef = async (data: {
     text: string;
@@ -388,6 +403,31 @@ export function JournalTracker() {
     }
   };
 
+  const handleSaveNote = async (content: string) => {
+    if (!editingNoteDay) return;
+    try {
+      // If content is empty, delete the note instead of saving empty
+      if (content.trim() === "") {
+        await deleteNote(editingNoteDay);
+      } else {
+        await saveNote(editingNoteDay, content);
+      }
+    } catch (err) {
+      console.error("Failed to save note", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteNote = async () => {
+    if (!editingNoteDay) return;
+    try {
+      await deleteNote(editingNoteDay);
+    } catch (err) {
+      console.error("Failed to delete note", err);
+      throw err;
+    }
+  };
+
   const handleToggleTask = async (assignmentId: string) => {
     // Try to find a real assignment first
     const assignment = assignments.find((a) => a.id === assignmentId);
@@ -450,25 +490,27 @@ export function JournalTracker() {
   const handleMarkTodayComplete = async () => {
     const todayStr = getLocalDateStr(new Date());
     // Use allAssignments to include virtual (recurring) tasks
-    const todayAssignments = allAssignments.filter((a) => a.dateStr === todayStr);
+    const todayAssignments = allAssignments.filter(
+      (a) => a.dateStr === todayStr,
+    );
     if (todayAssignments.length === 0) return;
     const allComplete = todayAssignments.every((a) => a.completed);
 
     try {
       // Separate real and virtual assignments
       const realAssignments = todayAssignments.filter(
-        (a) => !a.id.startsWith("virtual-")
+        (a) => !a.id.startsWith("virtual-"),
       );
       const virtualAssignments = todayAssignments.filter((a) =>
-        a.id.startsWith("virtual-")
+        a.id.startsWith("virtual-"),
       );
 
       // Update real assignments
       if (realAssignments.length > 0) {
         await Promise.all(
           realAssignments.map((a) =>
-            updateAssignment(a.id, { completed: !allComplete })
-          )
+            updateAssignment(a.id, { completed: !allComplete }),
+          ),
         );
       }
 
@@ -480,8 +522,12 @@ export function JournalTracker() {
             const rest = va.id.replace("virtual-", "");
             const taskId = rest.slice(0, -11); // Remove "-YYYY-MM-DD" suffix
             if (!taskId) return;
-            await createAssignment({ taskId, dateStr: todayStr, completed: true });
-          })
+            await createAssignment({
+              taskId,
+              dateStr: todayStr,
+              completed: true,
+            });
+          }),
         );
       }
     } catch (err) {
@@ -656,6 +702,8 @@ export function JournalTracker() {
               onDurationChange={handleDurationChange}
               onDropTask={handleDropTask}
               onRemoveTask={handleRemoveTask}
+              notes={notes}
+              onEditNote={setEditingNoteDay}
             />
           ) : view === "month" ? (
             <MonthCalendar
@@ -672,12 +720,16 @@ export function JournalTracker() {
               taskDefinitions={taskDefinitions}
               assignments={allAssignments}
               daysOff={daysOff}
+              notes={notes}
+              onSaveNote={saveNote}
             />
           ) : (
             <StatsPanel
               taskDefinitions={taskDefinitions}
               assignments={assignments}
               daysOff={daysOff}
+              notes={notes}
+              onSaveNote={saveNote}
             />
           )}
         </main>
@@ -741,6 +793,20 @@ export function JournalTracker() {
           onAssign={handleAssignTask}
           taskName={assignModalTask.text}
           baselineDuration={assignModalTask.baselineDuration}
+        />
+      )}
+
+      {editingNoteDay && (
+        <DayNoteModal
+          isOpen={!!editingNoteDay}
+          onClose={() => setEditingNoteDay(null)}
+          onSave={handleSaveNote}
+          onDelete={handleDeleteNote}
+          dayName={
+            currentData.find((d) => d.id === editingNoteDay)?.dayName || ""
+          }
+          date={currentData.find((d) => d.id === editingNoteDay)?.date || ""}
+          initialContent={notes[editingNoteDay] || ""}
         />
       )}
     </div>

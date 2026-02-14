@@ -33,6 +33,8 @@ interface MonthCalendarProps {
   taskDefinitions: TaskDefinition[];
   assignments: TaskAssignment[];
   daysOff: string[];
+  notes?: Record<string, string>;
+  onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
 export function MonthCalendar({
   currentDate,
@@ -45,6 +47,8 @@ export function MonthCalendar({
   taskDefinitions,
   assignments,
   daysOff,
+  notes = {},
+  onSaveNote,
 }: MonthCalendarProps) {
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
@@ -347,6 +351,8 @@ export function MonthCalendar({
         taskDefinitions={taskDefinitions}
         assignments={assignments.filter((a) => a.dateStr === viewingDayStr)}
         isRestDay={!!viewingDayStr && daysOff.includes(viewingDayStr)}
+        noteContent={viewingDayStr ? notes[viewingDayStr] || "" : ""}
+        onSaveNote={onSaveNote}
       />
     </motion.div>
   );

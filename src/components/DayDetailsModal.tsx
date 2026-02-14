@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, XCircle, Clock } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TaskDefinition {
   id: string;
@@ -26,6 +26,8 @@ interface DayDetailsModalProps {
   taskDefinitions: TaskDefinition[];
   assignments: TaskAssignment[];
   isRestDay: boolean;
+  noteContent?: string;
+  onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
 
 export function DayDetailsModal({
@@ -35,13 +37,39 @@ export function DayDetailsModal({
   taskDefinitions,
   assignments,
   isRestDay,
+  noteContent = "",
+  onSaveNote,
 }: DayDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteText, setNoteText] = useState(noteContent);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  // Update noteText when noteContent prop changes
+  useEffect(() => {
+    setNoteText(noteContent);
+  }, [noteContent]);
+
+  const handleSaveNote = async () => {
+    if (!dateStr || !onSaveNote) return;
+    try {
+      setIsSavingNote(true);
+      await onSaveNote(dateStr, noteText);
+      setEditingNote(false);
+    } catch (error) {
+      console.error("Failed to save note:", error);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
         onClose();
       }
     };
@@ -125,7 +153,7 @@ export function DayDetailsModal({
             </div>
 
             {/* Content */}
-            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar relative">
               {dayTasks.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="font-serif-text text-[#8B7355] italic">
@@ -140,7 +168,7 @@ export function DayDetailsModal({
                       className={`p-3 rounded-lg border flex items-center gap-3 transition-colors ${
                         task.isCompleted
                           ? "bg-white border-[#E8DCC4]"
-                          : isRestDay 
+                          : isRestDay
                             ? "bg-[#F5F5F5] border-transparent opacity-60"
                             : "bg-[#FFF5F5] border-[#E8DCC4]"
                       }`}
@@ -149,7 +177,7 @@ export function DayDetailsModal({
                         {task.isCompleted ? (
                           <CheckCircle2 className="w-6 h-6 text-[#8F7045]" />
                         ) : isRestDay ? (
-                           <div className="w-6 h-6 rounded-full border-2 border-[#A69B8F] flex items-center justify-center" />
+                          <div className="w-6 h-6 rounded-full border-2 border-[#A69B8F] flex items-center justify-center" />
                         ) : (
                           <XCircle className="w-6 h-6 text-[#D97757]" />
                         )}
@@ -157,7 +185,9 @@ export function DayDetailsModal({
                       <div className="flex-1 min-w-0">
                         <p
                           className={`font-serif-text text-sm font-bold ${
-                            task.isCompleted ? "text-[#2C2416]" : "text-[#5C4B37]"
+                            task.isCompleted
+                              ? "text-[#2C2416]"
+                              : "text-[#5C4B37]"
                           }`}
                         >
                           {task.text}
@@ -178,15 +208,66 @@ export function DayDetailsModal({
                   ))}
                 </div>
               )}
-            </div>
-            
-             {/* Footer Summary */}
-            <div className="bg-[#F9F5EB] p-3 text-center border-t border-[#E8DCC4]">
-               <p className="text-xs font-serif-text text-[#8B7355]">
-                 {dayTasks.filter(t => t.isCompleted).length} completed • {dayTasks.filter(t => !t.isCompleted).length} missed
-               </p>
+
+              {/* Notes Section */}
+              <div className="mt-6 pt-4 border-t border-[#E8DCC4]">
+                <h4 className="font-serif-text text-sm font-bold text-[#2C2416] mb-2">
+                  Daily Note
+                </h4>
+                {!editingNote ? (
+                  <div
+                    onClick={() => setEditingNote(true)}
+                    className="p-3 bg-[#FFF8E7] border border-dashed border-[#E8DCC4] rounded-lg cursor-pointer hover:bg-[#FFF5F5] transition-colors min-h-[80px]"
+                  >
+                    {noteText ? (
+                      <p className="font-serif-text text-sm text-[#2C2416] whitespace-pre-wrap">
+                        {noteText}
+                      </p>
+                    ) : (
+                      <p className="font-serif-text text-sm text-[#8B7355] italic">
+                        Click to add a note...
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      autoFocus
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Write your note here..."
+                      className="w-full p-3 bg-white border border-[#E8DCC4] rounded-lg font-serif-text text-sm text-[#2C2416] placeholder-[#8B7355] focus:outline-none focus:ring-2 focus:ring-[#8F7045] resize-none min-h-[100px]"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => {
+                          setEditingNote(false);
+                          setNoteText(noteContent);
+                        }}
+                        className="px-3 py-1.5 text-xs font-serif-text font-bold text-[#8B7355] hover:bg-[#F0E0C0] rounded transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveNote}
+                        disabled={isSavingNote}
+                        className="px-3 py-1.5 text-xs font-serif-text font-bold text-[#FFFBF5] bg-[#8F7045] hover:bg-[#6F5838] rounded transition-colors disabled:opacity-50"
+                      >
+                        {isSavingNote ? "Saving..." : "Save Note"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* Footer Summary */}
+            <div className="bg-[#F9F5EB] p-3 text-center border-t border-[#E8DCC4]">
+              <p className="text-xs font-serif-text text-[#8B7355]">
+                {dayTasks.filter((t) => t.isCompleted).length} completed •{" "}
+                {dayTasks.filter((t) => !t.isCompleted).length} missed
+              </p>
+            </div>
           </motion.div>
         </div>
       )}

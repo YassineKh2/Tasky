@@ -9,6 +9,8 @@ interface WeekViewProps {
   onDurationChange: (assignmentId: string, duration: number) => void;
   onDropTask: (taskId: string, dateStr: string) => void;
   onRemoveTask: (assignmentId: string) => void;
+  notes?: Record<string, string>;
+  onEditNote?: (dateStr: string) => void;
 }
 // const variants = {
 //   enter: (direction: number) => ({
@@ -40,6 +42,8 @@ export function WeekView({
   onDurationChange,
   onDropTask,
   onRemoveTask,
+  notes = {},
+  onEditNote,
 }: WeekViewProps) {
   // If no data yet, render empty placeholders to keep layout stable
   if (!weekData || weekData.length === 0) {
@@ -86,6 +90,8 @@ export function WeekView({
               onDurationChange={onDurationChange}
               onDropTask={onDropTask}
               onRemoveTask={onRemoveTask}
+              note={notes[day.id]}
+              onEditNote={onEditNote}
             />
           </div>
         ))}

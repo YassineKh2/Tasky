@@ -197,6 +197,48 @@ export const dayOffService = {
 };
 
 /**
+ * Day Notes utilities
+ */
+export const dayNotesService = {
+  // Get all notes for a date range
+  async getByDateRange(startDate: string, endDate: string) {
+    return await prisma.dayNotes.findMany({
+      where: {
+        dateStr: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    });
+  },
+
+  // Get a note for a specific date
+  async getByDate(dateStr: string) {
+    return await prisma.dayNotes.findUnique({
+      where: { dateStr },
+    });
+  },
+
+  // Save or update a note for a date
+  async upsert(dateStr: string, content: string) {
+    return await prisma.dayNotes.upsert({
+      where: { dateStr },
+      update: { content },
+      create: { dateStr, content },
+    });
+  },
+
+  // Delete a note for a date
+  async delete(dateStr: string) {
+    return await prisma.dayNotes
+      .delete({
+        where: { dateStr },
+      })
+      .catch(() => null); // Return null if not found
+  },
+};
+
+/**
  * Task Tracking utilities
  */
 export const taskTrackingService = {
