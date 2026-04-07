@@ -319,3 +319,51 @@ export const taskTrackingService = {
     };
   },
 };
+
+/**
+ * User Settings utilities
+ */
+export const userSettingsService = {
+  // Get settings or initialize with defaults if none exist
+  async getSettings() {
+    const settings = await prisma.userSettings.findUnique({
+      where: { id: "default" },
+    });
+
+    if (settings) {
+      return settings;
+    }
+
+    // Initialize with defaults if doesn't exist
+    return await prisma.userSettings.create({
+      data: {
+        id: "default",
+        countRestDaysAsMissing: false,
+        countVacationDaysAsMissing: false,
+        countOtherDaysAsMissing: false,
+        resetStreakAtRestDay: false,
+        resetStreakAtVacationDay: false,
+        resetStreakAtOtherDay: false,
+      },
+    });
+  },
+
+  // Update existing settings
+  async updateSettings(data: Partial<{
+    countRestDaysAsMissing: boolean;
+    countVacationDaysAsMissing: boolean;
+    countOtherDaysAsMissing: boolean;
+    resetStreakAtRestDay: boolean;
+    resetStreakAtVacationDay: boolean;
+    resetStreakAtOtherDay: boolean;
+  }>) {
+    return await prisma.userSettings.upsert({
+      where: { id: "default" },
+      update: data,
+      create: {
+        id: "default",
+        ...data,
+      },
+    });
+  },
+};

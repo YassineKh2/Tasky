@@ -78,3 +78,15 @@ model TaskTracking {
   @@index([assignmentId])
   @@index([taskId])
 }
+
+// User Settings - Singleton table for global defaults
+model UserSettings {
+  id                           String   @id @default("default")
+  countRestDaysAsMissing       Boolean  @default(false)
+  countVacationDaysAsMissing   Boolean  @default(false)
+  countOtherDaysAsMissing      Boolean  @default(false)
+  resetStreakAtRestDay         Boolean  @default(false)
+  resetStreakAtVacationDay     Boolean  @default(false)
+  resetStreakAtOtherDay        Boolean  @default(false)
+  updatedAt                    DateTime @updatedAt
+}

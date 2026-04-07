@@ -7,22 +7,23 @@ import { X, Settings, Lock, CalendarOff, SkipForward } from "lucide-react";
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  settings: any;
+  updateSettings: (data: any) => Promise<any>;
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, settings, updateSettings }: SettingsModalProps) {
   // Settings UI state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  // Toggle states
-  const [countRestDaysAsMissing, setCountRestDaysAsMissing] = useState(false);
-  const [countVacationDaysAsMissing, setCountVacationDaysAsMissing] = useState(false);
-  const [countOtherDaysAsMissing, setCountOtherDaysAsMissing] = useState(false);
-  const [resetStreakAtRestDay, setResetStreakAtRestDay] = useState(true);
-  const [resetStreakAtVacationDay, setResetStreakAtVacationDay] = useState(true);
-  const [resetStreakAtOtherDay, setResetStreakAtOtherDay] = useState(true);
+  const countRestDaysAsMissing = settings?.countRestDaysAsMissing ?? false;
+  const countVacationDaysAsMissing = settings?.countVacationDaysAsMissing ?? false;
+  const countOtherDaysAsMissing = settings?.countOtherDaysAsMissing ?? false;
+  const resetStreakAtRestDay = settings?.resetStreakAtRestDay ?? false;
+  const resetStreakAtVacationDay = settings?.resetStreakAtVacationDay ?? false;
+  const resetStreakAtOtherDay = settings?.resetStreakAtOtherDay ?? false;
 
   const Toggle = ({ label, icon: Icon, state, onToggle, last = false }: { label: string, icon: React.ElementType, state: boolean, onToggle: () => void, last?: boolean }) => (
     <div className={`flex items-center justify-between py-2 ${!last ? "border-b border-[#E8DCC4] border-dashed" : ""}`}>
@@ -174,19 +175,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           label="Rest Days" 
                           icon={CalendarOff} 
                           state={countRestDaysAsMissing} 
-                          onToggle={() => setCountRestDaysAsMissing(!countRestDaysAsMissing)} 
+                          onToggle={() => updateSettings({ countRestDaysAsMissing: !countRestDaysAsMissing })} 
                         />
                         <Toggle 
                           label="Vacation Days" 
                           icon={CalendarOff} 
                           state={countVacationDaysAsMissing} 
-                          onToggle={() => setCountVacationDaysAsMissing(!countVacationDaysAsMissing)} 
+                          onToggle={() => updateSettings({ countVacationDaysAsMissing: !countVacationDaysAsMissing })} 
                         />
                         <Toggle 
                           label="Other Off Days" 
                           icon={CalendarOff} 
                           state={countOtherDaysAsMissing} 
-                          onToggle={() => setCountOtherDaysAsMissing(!countOtherDaysAsMissing)} 
+                          onToggle={() => updateSettings({ countOtherDaysAsMissing: !countOtherDaysAsMissing })} 
                           last
                         />
                       </div>
@@ -200,19 +201,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           label="Rest Days" 
                           icon={SkipForward} 
                           state={resetStreakAtRestDay} 
-                          onToggle={() => setResetStreakAtRestDay(!resetStreakAtRestDay)} 
+                          onToggle={() => updateSettings({ resetStreakAtRestDay: !resetStreakAtRestDay })} 
                         />
                         <Toggle 
                           label="Vacation Days" 
                           icon={SkipForward} 
                           state={resetStreakAtVacationDay} 
-                          onToggle={() => setResetStreakAtVacationDay(!resetStreakAtVacationDay)} 
+                          onToggle={() => updateSettings({ resetStreakAtVacationDay: !resetStreakAtVacationDay })} 
                         />
                         <Toggle 
                           label="Other Off Days" 
                           icon={SkipForward} 
                           state={resetStreakAtOtherDay} 
-                          onToggle={() => setResetStreakAtOtherDay(!resetStreakAtOtherDay)} 
+                          onToggle={() => updateSettings({ resetStreakAtOtherDay: !resetStreakAtOtherDay })} 
                           last
                         />
                       </div>

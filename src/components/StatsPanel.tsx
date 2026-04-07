@@ -30,6 +30,14 @@ interface StatsPanelProps {
   assignments: TaskAssignment[];
   daysOff: string[];
   daysOffDetails?: Record<string, { type: string; reason: string | null }>;
+  userSettings?: {
+    countRestDaysAsMissing: boolean;
+    countVacationDaysAsMissing: boolean;
+    countOtherDaysAsMissing: boolean;
+    resetStreakAtRestDay: boolean;
+    resetStreakAtVacationDay: boolean;
+    resetStreakAtOtherDay: boolean;
+  } | null;
   notes?: Record<string, string>;
   onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
@@ -39,6 +47,7 @@ export function StatsPanel({
   assignments,
   daysOff,
   daysOffDetails,
+  userSettings,
   notes = {},
   onSaveNote,
 }: StatsPanelProps) {
@@ -98,22 +107,39 @@ export function StatsPanel({
       allCompleted: boolean;
       hasTasks: boolean;
       isRestDay: boolean;
+      dayOffType?: string;
     }[] = [];
 
     while (current <= today) {
       const dateStr = getLocalDateStr(current);
       const dayOfWeek = current.getDay();
 
+      const dayOffDetail = daysOffDetails?.[dateStr];
+      const dayOffType = dayOffDetail?.type || "REST";
+      
+      let isIgnored = false;
+
       // Skip if marked as rest day
       if (daysOff.includes(dateStr)) {
         dayStatsList.push({
           date: new Date(current),
-          allCompleted: false,
+          allCompleted: false, // will adjust later
           hasTasks: false,
           isRestDay: true,
+          dayOffType: dayOffType,
         });
-        current.setDate(current.getDate() + 1);
-        continue;
+
+        // Depending on user settings, do we count this as a missed day?
+        const shouldCountMissed = 
+          (dayOffType === "REST" && userSettings?.countRestDaysAsMissing) ||
+          (dayOffType === "VACATION" && userSettings?.countVacationDaysAsMissing) ||
+          (dayOffType === "OTHER" && userSettings?.countOtherDaysAsMissing);
+
+        if (!shouldCountMissed) {
+          isIgnored = true;
+          current.setDate(current.getDate() + 1);
+          continue;
+        }
       }
 
       // Identify expected tasks for this day
@@ -223,26 +249,58 @@ export function StatsPanel({
     let tempStreak = 0;
 
     // Iterate backwards for current streak
+    const dayStatsListExtended: {
+      date: Date;
+      allCompleted: boolean;
+      hasTasks: boolean;
+      isRestDay: boolean;
+      dayOffType?: string;
+    }[] = dayStatsList;
+
     // Iterate backwards for current streak
-    for (let i = dayStatsList.length - 1; i >= 0; i--) {
-      const stat = dayStatsList[i];
+    for (let i = dayStatsListExtended.length - 1; i >= 0; i--) {
+      const stat = dayStatsListExtended[i];
 
       // Check if day relates to streak (tasks assigned OR rest day)
       if (stat.hasTasks || stat.isRestDay) {
-        // Completed if tasks done OR it is a rest day
-        if (stat.allCompleted || stat.isRestDay) {
+        if (stat.isRestDay) {
+          // check if rest day resets streak based on userSettings
+          const shouldReset = 
+            (stat.dayOffType === "REST" && userSettings?.resetStreakAtRestDay) ||
+            (stat.dayOffType === "VACATION" && userSettings?.resetStreakAtVacationDay) ||
+            (stat.dayOffType === "OTHER" && userSettings?.resetStreakAtOtherDay);
+
+          if (shouldReset) {
+            break;
+          } else {
+            // It preserves streak. We just add to it unless it was a miss.
+            currentStreak++;
+          }
+        } else if (stat.allCompleted) {
           currentStreak++;
         } else {
-          break;
+          break; // Missed assignments day
         }
       }
-      // If empty day (no tasks, not rest day), preserve streak (do not break, do not increment)
+      // If empty day (no tasks, not off day), preserve streak (do not break, do not increment)
     }
 
     // Iterate forwards for longest streak
-    for (const stat of dayStatsList) {
+    for (const stat of dayStatsListExtended) {
       if (stat.hasTasks || stat.isRestDay) {
-        if (stat.allCompleted || stat.isRestDay) {
+        if (stat.isRestDay) {
+          const shouldReset = 
+            (stat.dayOffType === "REST" && userSettings?.resetStreakAtRestDay) ||
+            (stat.dayOffType === "VACATION" && userSettings?.resetStreakAtVacationDay) ||
+            (stat.dayOffType === "OTHER" && userSettings?.resetStreakAtOtherDay);
+
+          if (shouldReset) {
+             longestStreak = Math.max(longestStreak, tempStreak);
+             tempStreak = 0;
+          } else {
+             tempStreak++;
+          }
+        } else if (stat.allCompleted) {
           tempStreak++;
         } else {
           longestStreak = Math.max(longestStreak, tempStreak);

@@ -21,6 +21,7 @@ import { useTasksAPI, type TaskDefinition } from "../hooks/useTasksAPI";
 import { useAssignmentsAPI } from "../hooks/useAssignmentsAPI";
 import { useDaysOffAPI } from "../hooks/useDaysOffAPI";
 import { useDayNotesAPI } from "../hooks/useDayNotesAPI";
+import { useSettingsAPI } from "../hooks/useSettingsAPI";
 // Helper to get local date string (fixes timezone offset bug)
 const getLocalDateStr = (date: Date): string => {
   const year = date.getFullYear();
@@ -46,6 +47,7 @@ export function JournalTracker() {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
   // API hooks
+  const { settings, updateSettings } = useSettingsAPI();
   const {
     tasks: taskDefinitions,
     fetchTasks,
@@ -758,6 +760,7 @@ export function JournalTracker() {
               assignments={assignments}
               daysOff={daysOff}
               daysOffDetails={daysOffDetails}
+              userSettings={settings}
               notes={notes}
               onSaveNote={saveNote}
             />
@@ -852,6 +855,8 @@ export function JournalTracker() {
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
+        settings={settings}
+        updateSettings={updateSettings}
       />
     </div>
   );
