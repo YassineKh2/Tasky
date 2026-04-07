@@ -45,6 +45,8 @@ model TaskAssignment {
 model DayOff {
   id        String   @id @default(cuid())
   dateStr   String   @unique // ISO date format "YYYY-MM-DD"
+  type      String   @default("REST") // "REST" | "VACATION" | "OTHER"
+  reason    String?  // Empty unless type is "OTHER"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

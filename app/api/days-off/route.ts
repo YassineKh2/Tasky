@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const dayOff = await dayOffService.markAsOff(body.dateStr);
+    const dayOff = await dayOffService.markAsOff(body.dateStr, body.type, body.reason);
     return NextResponse.json(dayOff, { status: 201 });
   } catch (error) {
     console.error("Error marking day off:", error);

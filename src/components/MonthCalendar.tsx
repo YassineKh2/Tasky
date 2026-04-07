@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, CheckSquare, Coffee } from "lucide-react";
+import { Check, CheckSquare, Coffee, Palmtree, HelpCircle } from "lucide-react";
 import { DayData } from "./DayCard";
 import { DayDetailsModal } from "./DayDetailsModal";
 interface TaskDefinition {
@@ -304,7 +304,13 @@ export function MonthCalendar({
               {isCurrentMonth && !isSelected && (
                 <div className="absolute bottom-1 flex items-center justify-center">
                   {day.isDayOff ? (
-                    <Coffee className="w-3 h-3 text-[#8B7355]" />
+                    day.dayOffType === "VACATION" ? (
+                      <Palmtree className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#8B7355]" />
+                    ) : day.dayOffType === "OTHER" ? (
+                      <HelpCircle className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#8B7355]" />
+                    ) : (
+                      <Coffee className="w-3 h-3 text-[#8B7355]" />
+                    )
                   ) : completionLevel === 0 ? (
                     <div className="w-1 h-1 rounded-full bg-red-400" />
                   ) : day.isComplete ? (
@@ -351,6 +357,8 @@ export function MonthCalendar({
         taskDefinitions={taskDefinitions}
         assignments={assignments.filter((a) => a.dateStr === viewingDayStr)}
         isRestDay={!!viewingDayStr && daysOff.includes(viewingDayStr)}
+        dayOffType={days.find(d => d.id === viewingDayStr)?.dayOffType}
+        dayOffReason={days.find(d => d.id === viewingDayStr)?.dayOffReason}
         noteContent={viewingDayStr ? notes[viewingDayStr] || "" : ""}
         onSaveNote={onSaveNote}
       />

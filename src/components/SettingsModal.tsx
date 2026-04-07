@@ -19,22 +19,24 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Toggle states
   const [countRestDaysAsMissing, setCountRestDaysAsMissing] = useState(false);
   const [countVacationDaysAsMissing, setCountVacationDaysAsMissing] = useState(false);
-  const [resetStreakAtVacationDay, setResetStreakAtVacationDay] = useState(true);
+  const [countOtherDaysAsMissing, setCountOtherDaysAsMissing] = useState(false);
   const [resetStreakAtRestDay, setResetStreakAtRestDay] = useState(true);
+  const [resetStreakAtVacationDay, setResetStreakAtVacationDay] = useState(true);
+  const [resetStreakAtOtherDay, setResetStreakAtOtherDay] = useState(true);
 
-  const Toggle = ({ label, icon: Icon, state, onToggle }: { label: string, icon: React.ElementType, state: boolean, onToggle: () => void }) => (
-    <div className="flex items-center justify-between py-3">
+  const Toggle = ({ label, icon: Icon, state, onToggle, last = false }: { label: string, icon: React.ElementType, state: boolean, onToggle: () => void, last?: boolean }) => (
+    <div className={`flex items-center justify-between py-2 ${!last ? "border-b border-[#E8DCC4] border-dashed" : ""}`}>
       <label className="flex items-center gap-3 font-serif-text text-sm font-bold text-[#8B7355] uppercase tracking-wider cursor-pointer select-none">
         <Icon className="w-4 h-4" />
         {label}
       </label>
       <button
         onClick={onToggle}
-        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 relative flex items-center ${state ? "bg-[#2C2416]" : "bg-[#E8DCC4]"}`}
+        className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 relative flex items-center ${state ? "bg-[#2C2416]" : "bg-[#E8DCC4]"}`}
       >
         <motion.div
           initial={false}
-          animate={{ x: state ? 24 : 0 }}
+          animate={{ x: state ? 20 : 0 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
           className="w-4 h-4 bg-white rounded-full shadow-sm"
         />
@@ -162,31 +164,59 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <h3 className="font-handwriting text-2xl text-[#2C2416] mb-4 border-b-2 border-[#E8DCC4] pb-2">
                     Tracker Rules
                   </h3>
-                  <div className="space-y-1">
-                    <Toggle 
-                      label="Count rest days as missing" 
-                      icon={CalendarOff} 
-                      state={countRestDaysAsMissing} 
-                      onToggle={() => setCountRestDaysAsMissing(!countRestDaysAsMissing)} 
-                    />
-                    <Toggle 
-                      label="Count vacation days as missing" 
-                      icon={CalendarOff} 
-                      state={countVacationDaysAsMissing} 
-                      onToggle={() => setCountVacationDaysAsMissing(!countVacationDaysAsMissing)} 
-                    />
-                    <Toggle 
-                      label="Reset streak at a vacation day" 
-                      icon={SkipForward} 
-                      state={resetStreakAtVacationDay} 
-                      onToggle={() => setResetStreakAtVacationDay(!resetStreakAtVacationDay)} 
-                    />
-                    <Toggle 
-                      label="Reset streak at a rest day" 
-                      icon={SkipForward} 
-                      state={resetStreakAtRestDay} 
-                      onToggle={() => setResetStreakAtRestDay(!resetStreakAtRestDay)} 
-                    />
+                  
+                  <div className="space-y-6">
+                    {/* Group 1: Count as Missing */}
+                    <div className="bg-white p-3 rounded-lg border border-[#E8DCC4]">
+                      <h4 className="font-serif-text text-xs font-bold text-[#2C2416] uppercase tracking-widest mb-2 opacity-60">Count as Missing</h4>
+                      <div className="flex flex-col">
+                        <Toggle 
+                          label="Rest Days" 
+                          icon={CalendarOff} 
+                          state={countRestDaysAsMissing} 
+                          onToggle={() => setCountRestDaysAsMissing(!countRestDaysAsMissing)} 
+                        />
+                        <Toggle 
+                          label="Vacation Days" 
+                          icon={CalendarOff} 
+                          state={countVacationDaysAsMissing} 
+                          onToggle={() => setCountVacationDaysAsMissing(!countVacationDaysAsMissing)} 
+                        />
+                        <Toggle 
+                          label="Other Off Days" 
+                          icon={CalendarOff} 
+                          state={countOtherDaysAsMissing} 
+                          onToggle={() => setCountOtherDaysAsMissing(!countOtherDaysAsMissing)} 
+                          last
+                        />
+                      </div>
+                    </div>
+
+                    {/* Group 2: Reset Streak */}
+                    <div className="bg-white p-3 rounded-lg border border-[#E8DCC4]">
+                      <h4 className="font-serif-text text-xs font-bold text-[#2C2416] uppercase tracking-widest mb-2 opacity-60">Reset Streaks On</h4>
+                      <div className="flex flex-col">
+                        <Toggle 
+                          label="Rest Days" 
+                          icon={SkipForward} 
+                          state={resetStreakAtRestDay} 
+                          onToggle={() => setResetStreakAtRestDay(!resetStreakAtRestDay)} 
+                        />
+                        <Toggle 
+                          label="Vacation Days" 
+                          icon={SkipForward} 
+                          state={resetStreakAtVacationDay} 
+                          onToggle={() => setResetStreakAtVacationDay(!resetStreakAtVacationDay)} 
+                        />
+                        <Toggle 
+                          label="Other Off Days" 
+                          icon={SkipForward} 
+                          state={resetStreakAtOtherDay} 
+                          onToggle={() => setResetStreakAtOtherDay(!resetStreakAtOtherDay)} 
+                          last
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

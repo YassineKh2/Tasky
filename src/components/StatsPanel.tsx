@@ -29,6 +29,7 @@ interface StatsPanelProps {
   taskDefinitions: TaskDefinition[];
   assignments: TaskAssignment[];
   daysOff: string[];
+  daysOffDetails?: Record<string, { type: string; reason: string | null }>;
   notes?: Record<string, string>;
   onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
@@ -37,6 +38,7 @@ export function StatsPanel({
   taskDefinitions,
   assignments,
   daysOff,
+  daysOffDetails,
   notes = {},
   onSaveNote,
 }: StatsPanelProps) {
@@ -364,6 +366,7 @@ export function StatsPanel({
       <ActivityHeatmap
         data={charts.heatmapData}
         daysOff={daysOff}
+        daysOffDetails={daysOffDetails}
         onDayClick={setSelectedDayStr}
       />
 
@@ -374,6 +377,8 @@ export function StatsPanel({
         taskDefinitions={taskDefinitions}
         assignments={assignments.filter((a) => a.dateStr === selectedDayStr)}
         isRestDay={!!selectedDayStr && daysOff.includes(selectedDayStr)}
+        dayOffType={selectedDayStr && daysOffDetails ? daysOffDetails[selectedDayStr]?.type : undefined}
+        dayOffReason={selectedDayStr && daysOffDetails ? daysOffDetails[selectedDayStr]?.reason : undefined}
         noteContent={selectedDayStr ? notes[selectedDayStr] || "" : ""}
         onSaveNote={onSaveNote}
       />

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Circle, Check, Coffee, FileText } from "lucide-react";
+import { Star, Circle, Check, Coffee, FileText, Palmtree, HelpCircle } from "lucide-react";
 import { TaskItem } from "./TaskItem";
 import { HourLog } from "./HourLog";
 export interface Task {
@@ -18,6 +18,8 @@ export interface DayData {
   dayName: string;
   isToday: boolean;
   isDayOff: boolean;
+  dayOffType?: string;
+  dayOffReason?: string | null;
   isComplete: boolean;
   tasks: Task[];
   hourLogs: string[];
@@ -147,10 +149,24 @@ export function DayCard({
         <div className="flex-1">
           {day.isDayOff ? (
             <div className="h-full flex flex-col items-center justify-center opacity-60 text-[#8B7355]">
-              <Coffee className="w-12 h-12 mb-2 stroke-1" />
-              <span className="font-handwriting text-2xl -rotate-6">
-                Rest Day
-              </span>
+              {day.dayOffType === "VACATION" ? (
+                <>
+                  <Palmtree className="w-12 h-12 mb-2 stroke-1" />
+                  <span className="font-handwriting text-2xl -rotate-6">Vacation</span>
+                </>
+              ) : day.dayOffType === "OTHER" ? (
+                <>
+                  <HelpCircle className="w-12 h-12 mb-2 stroke-1" />
+                  <span className="font-handwriting text-xl -rotate-6 text-center px-4 max-w-[200px] leading-tight mt-1">
+                    {day.dayOffReason || "Day Off"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Coffee className="w-12 h-12 mb-2 stroke-1" />
+                  <span className="font-handwriting text-2xl -rotate-6">Rest Day</span>
+                </>
+              )}
             </div>
           ) : day.tasks.length > 0 ? (
             <div className="space-y-1">

@@ -178,11 +178,11 @@ export const dayOffService = {
   },
 
   // Mark a day as off
-  async markAsOff(dateStr: string) {
+  async markAsOff(dateStr: string, type: string = "REST", reason: string | null = null) {
     return await prisma.dayOff.upsert({
       where: { dateStr },
-      update: {},
-      create: { dateStr },
+      update: { type, reason },
+      create: { dateStr, type, reason },
     });
   },
 

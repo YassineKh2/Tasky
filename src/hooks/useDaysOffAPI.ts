@@ -1,17 +1,24 @@
 import { useState, useCallback } from "react";
 
+export interface DayOffDetails {
+  type: string;
+  reason: string | null;
+}
+
 interface UseDaysOffAPIReturn {
   daysOff: string[];
+  daysOffDetails: Record<string, DayOffDetails>;
   loading: boolean;
   error: string | null;
   getByDateRange: (startDate: string, endDate: string) => Promise<void>;
-  markDayOff: (dateStr: string) => Promise<void>;
+  markDayOff: (dateStr: string, type?: string, reason?: string | null) => Promise<void>;
   unmarkDayOff: (dateStr: string) => Promise<void>;
   setDaysOff: (daysOff: string[]) => void;
 }
 
 export function useDaysOffAPI(): UseDaysOffAPIReturn {
   const [daysOff, setDaysOffState] = useState<string[]>([]);
+  const [daysOffDetails, setDaysOffDetails] = useState<Record<string, DayOffDetails>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +35,13 @@ export function useDaysOffAPI(): UseDaysOffAPIReturn {
         if (!res.ok)
           throw new Error(`Failed to fetch days off: ${res.statusText}`);
         const data = await res.json();
-        setDaysOffState(data.map((d: { dateStr: string }) => d.dateStr));
+        setDaysOffState(data.map((d: any) => d.dateStr));
+        
+        const details: Record<string, DayOffDetails> = {};
+        for(const d of data) {
+           details[d.dateStr] = { type: d.type || "REST", reason: d.reason || null };
+        }
+        setDaysOffDetails(details);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
@@ -40,18 +53,23 @@ export function useDaysOffAPI(): UseDaysOffAPIReturn {
     [],
   );
 
-  const markDayOff = useCallback(async (dateStr: string) => {
+  const markDayOff = useCallback(async (dateStr: string, type: string = "REST", reason: string | null = null) => {
     setError(null);
     try {
       const res = await fetch("/api/days-off", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dateStr }),
+        body: JSON.stringify({ dateStr, type, reason }),
       });
       if (!res.ok) throw new Error(`Failed to mark day off: ${res.statusText}`);
+      
       setDaysOffState((prev) =>
         prev.includes(dateStr) ? prev : [...prev, dateStr],
       );
+      setDaysOffDetails((prev) => ({
+        ...prev,
+        [dateStr]: { type, reason }
+      }));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
@@ -66,7 +84,13 @@ export function useDaysOffAPI(): UseDaysOffAPIReturn {
       const res = await fetch(`/api/days-off/${dateStr}`, { method: "DELETE" });
       if (!res.ok)
         throw new Error(`Failed to unmark day off: ${res.statusText}`);
+        
       setDaysOffState((prev) => prev.filter((d) => d !== dateStr));
+      setDaysOffDetails((prev) => {
+        const newDetails = { ...prev };
+        delete newDetails[dateStr];
+        return newDetails;
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
@@ -77,6 +101,7 @@ export function useDaysOffAPI(): UseDaysOffAPIReturn {
 
   return {
     daysOff,
+    daysOffDetails,
     loading,
     error,
     getByDateRange,

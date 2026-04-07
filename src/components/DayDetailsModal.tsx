@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { X, CheckCircle2, XCircle, Clock, Palmtree, HelpCircle, Coffee } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface TaskDefinition {
@@ -26,6 +26,8 @@ interface DayDetailsModalProps {
   taskDefinitions: TaskDefinition[];
   assignments: TaskAssignment[];
   isRestDay: boolean;
+  dayOffType?: string;
+  dayOffReason?: string | null;
   noteContent?: string;
   onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
@@ -37,6 +39,8 @@ export function DayDetailsModal({
   taskDefinitions,
   assignments,
   isRestDay,
+  dayOffType,
+  dayOffReason,
   noteContent = "",
   onSaveNote,
 }: DayDetailsModalProps) {
@@ -139,8 +143,14 @@ export function DayDetailsModal({
                   {formattedDate}
                 </h3>
                 {isRestDay && (
-                  <span className="inline-block px-2 py-0.5 mt-1 text-xs font-serif-text font-bold text-[#FFFBF5] bg-[#A69B8F] rounded-full">
-                    Rest Day
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 mt-1 text-xs font-serif-text font-bold text-[#FFFBF5] bg-[#A69B8F] rounded-full shadow-sm">
+                    {dayOffType === "VACATION" ? (
+                       <><Palmtree className="w-3 h-3" /> Vacation</>
+                    ) : dayOffType === "OTHER" ? (
+                       <><HelpCircle className="w-3 h-3" /> {dayOffReason || "Day Off"}</>
+                    ) : (
+                       <><Coffee className="w-3 h-3" /> Rest Day</>
+                    )}
                   </span>
                 )}
               </div>

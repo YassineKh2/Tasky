@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ActivityHeatmapProps {
   data: { date: string; count: number; missed?: number; level: number }[];
   daysOff: string[];
+  daysOffDetails?: Record<string, { type: string; reason: string | null }>;
   onDayClick?: (dateStr: string) => void;
 }
 
 export function ActivityHeatmap({
   data,
   daysOff,
+  daysOffDetails,
   onDayClick,
 }: ActivityHeatmapProps) {
   const [hoveredData, setHoveredData] = useState<{
@@ -19,6 +21,8 @@ export function ActivityHeatmap({
     count: number;
     missed: number;
     isRestDay: boolean;
+    dayOffType?: string;
+    dayOffReason?: string | null;
     isFuture: boolean;
   } | null>(null);
 
@@ -64,11 +68,16 @@ export function ActivityHeatmap({
   const getColor = (
     level: number,
     isRestDay: boolean,
+    dayOffType: string | undefined,
     isFuture: boolean,
     missed: number,
   ) => {
     if (isFuture) return "bg-[#E5E7EB] border-transparent"; // Future: Cool Gray
-    if (isRestDay) return "bg-[#A69B8F] opacity-80"; // Rest Day: Taupe
+    if (isRestDay) {
+      if (dayOffType === "VACATION") return "bg-[#8A9A86] opacity-80 border-transparent shadow-sm"; // Sage Green
+      if (dayOffType === "OTHER") return "bg-[#7D8491] opacity-80 border-transparent shadow-sm"; // Slate Blue
+      return "bg-[#A69B8F] opacity-80"; // Rest Day: Taupe
+    }
     if (missed > 0) return "bg-[#D97757]"; // Missed: Rust Red
 
     switch (level) {
@@ -96,6 +105,8 @@ export function ActivityHeatmap({
     count: number,
     missed: number,
     isRestDay: boolean,
+    dayOffType: string | undefined,
+    dayOffReason: string | null | undefined,
     isFuture: boolean,
   ) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -106,6 +117,8 @@ export function ActivityHeatmap({
       count,
       missed,
       isRestDay,
+      dayOffType,
+      dayOffReason,
       isFuture,
     });
   };
@@ -146,6 +159,9 @@ export function ActivityHeatmap({
                 const count = dayData ? dayData.count : 0;
                 const missed = dayData?.missed || 0;
                 const isRestDay = daysOff.includes(dateStr);
+                const dayOffDetail = daysOffDetails?.[dateStr];
+                const dayOffType = dayOffDetail?.type;
+                const dayOffReason = dayOffDetail?.reason;
                 const isFuture = date > today;
 
                 const formattedDate = date.toLocaleDateString("en-US", {
@@ -165,11 +181,13 @@ export function ActivityHeatmap({
                         count,
                         missed,
                         isRestDay,
+                        dayOffType,
+                        dayOffReason,
                         isFuture,
                       )
                     }
                     onMouseLeave={handleMouseLeave}
-                    className={`w-3 h-3 rounded-sm border border-[#E8DCC4]/50 transition-all hover:scale-125 hover:z-10 relative cursor-pointer ${getColor(level, isRestDay, isFuture, missed)}`}
+                    className={`w-3 h-3 rounded-sm border border-[#E8DCC4]/50 transition-all hover:scale-125 hover:z-10 relative cursor-pointer ${getColor(level, isRestDay, dayOffType, isFuture, missed)}`}
                   />
                 );
               })}
@@ -199,11 +217,15 @@ export function ActivityHeatmap({
             <div className="font-bold text-[#2C2416] mb-0.5">
               {hoveredData.date}
             </div>
-            <div className="text-[#8B7355] italic">
+            <div className="text-[#8B7355] italic whitespace-normal max-w-[200px]">
               {hoveredData.isFuture
                 ? "Upcoming"
                 : hoveredData.isRestDay
-                  ? "Rest Day"
+                  ? hoveredData.dayOffType === "VACATION"
+                    ? "Vacation"
+                    : hoveredData.dayOffType === "OTHER"
+                      ? hoveredData.dayOffReason || "Day Off"
+                      : "Rest Day"
                   : hoveredData.missed > 0
                     ? `${hoveredData.missed} tasks missed`
                     : `${hoveredData.count} tasks completed`}
@@ -222,6 +244,14 @@ export function ActivityHeatmap({
         <div className="flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text">
           <div className="w-3 h-3 rounded-sm bg-[#A69B8F] opacity-80 border border-[#E8DCC4]/30" />
           <span>Rest</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text">
+          <div className="w-3 h-3 rounded-sm bg-[#8A9A86] opacity-80 border border-[#E8DCC4]/30 shadow-sm" />
+          <span>Vacation</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text">
+          <div className="w-3 h-3 rounded-sm bg-[#7D8491] opacity-80 border border-[#E8DCC4]/30 shadow-sm" />
+          <span>Other</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-[#8B7355] font-serif-text">
           <div className="w-3 h-3 rounded-sm bg-[#D97757] border border-[#E8DCC4]/30" />

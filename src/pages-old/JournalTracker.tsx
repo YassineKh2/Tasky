@@ -10,6 +10,7 @@ import { TaskCreationModal } from "../components/TaskCreationModal";
 import { TaskEditModal } from "../components/TaskEditModal";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { DayNoteModal } from "../components/DayNoteModal";
+import { DayOffModal } from "../components/DayOffModal";
 import { TaskLibrary } from "../components/TaskLibrary";
 import { TaskAssignmentModal } from "../components/TaskAssignmentModal";
 import { BulkActionsBar } from "../components/BulkActionsBar";
@@ -39,6 +40,7 @@ export function JournalTracker() {
   );
   const [editingNoteDay, setEditingNoteDay] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [markingDayOffDate, setMarkingDayOffDate] = useState<string | null>(null);
   // Selection state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -60,6 +62,7 @@ export function JournalTracker() {
   } = useAssignmentsAPI();
   const {
     daysOff,
+    daysOffDetails,
     getByDateRange: getDaysOffRange,
     markDayOff,
     unmarkDayOff,
@@ -229,6 +232,7 @@ export function JournalTracker() {
         const isoDate = getLocalDateStr(date);
         const tasks = getTasksForDate(date);
         const isDayOff = daysOff.includes(isoDate);
+        const dayOffDetail = daysOffDetails[isoDate];
         const isComplete = tasks.length > 0 && tasks.every((t) => t.completed);
         days.push({
           id: isoDate,
@@ -242,6 +246,8 @@ export function JournalTracker() {
           fullDate: date,
           isToday: date.toDateString() === new Date().toDateString(),
           isDayOff,
+          dayOffType: dayOffDetail?.type || "REST",
+          dayOffReason: dayOffDetail?.reason || null,
           isComplete,
           tasks,
           hourLogs: [],
@@ -260,6 +266,7 @@ export function JournalTracker() {
         const isoDate = getLocalDateStr(date);
         const tasks = getTasksForDate(date);
         const isDayOff = daysOff.includes(isoDate);
+        const dayOffDetail = daysOffDetails[isoDate];
         const isComplete = tasks.length > 0 && tasks.every((t) => t.completed);
         days.push({
           id: isoDate,
@@ -273,6 +280,8 @@ export function JournalTracker() {
           fullDate: date,
           isToday: date.toDateString() === new Date().toDateString(),
           isDayOff,
+          dayOffType: dayOffDetail?.type || "REST",
+          dayOffReason: dayOffDetail?.reason || null,
           isComplete,
           tasks,
           hourLogs: [],
@@ -280,7 +289,7 @@ export function JournalTracker() {
       }
     }
     return days;
-  }, [view, currentDate, getTasksForDate, daysOff]);
+  }, [view, currentDate, getTasksForDate, daysOff, daysOffDetails]);
 
   // Memoize the current view data to ensure immediate UI updates
   const currentData = useMemo(() => {
@@ -482,10 +491,20 @@ export function JournalTracker() {
       if (daysOff.includes(dayId)) {
         await unmarkDayOff(dayId);
       } else {
-        await markDayOff(dayId);
+        setMarkingDayOffDate(dayId);
       }
     } catch (err) {
       console.error("Failed to toggle day off", err);
+    }
+  };
+
+  const handleSaveDayOff = async (type: string, reason: string | null) => {
+    if (!markingDayOffDate) return;
+    try {
+      await markDayOff(markingDayOffDate, type, reason);
+      setMarkingDayOffDate(null);
+    } catch (err) {
+      console.error("Failed to mark day off", err);
     }
   };
 
@@ -738,6 +757,7 @@ export function JournalTracker() {
               taskDefinitions={taskDefinitions}
               assignments={assignments}
               daysOff={daysOff}
+              daysOffDetails={daysOffDetails}
               notes={notes}
               onSaveNote={saveNote}
             />
@@ -817,6 +837,15 @@ export function JournalTracker() {
           }
           date={currentData.find((d) => d.id === editingNoteDay)?.date || ""}
           initialContent={notes[editingNoteDay] || ""}
+        />
+      )}
+
+      {markingDayOffDate && (
+        <DayOffModal
+          isOpen={!!markingDayOffDate}
+          onClose={() => setMarkingDayOffDate(null)}
+          onSave={handleSaveDayOff}
+          dateStr={markingDayOffDate}
         />
       )}
 
