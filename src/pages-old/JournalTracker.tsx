@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, PenTool } from "lucide-react";
+import { ChevronLeft, ChevronRight, PenTool, Settings } from "lucide-react";
 import { WeekView } from "../components/WeekView";
 import { MonthCalendar } from "../components/MonthCalendar";
 import { ViewToggle } from "../components/ViewToggle";
@@ -13,6 +13,7 @@ import { DayNoteModal } from "../components/DayNoteModal";
 import { TaskLibrary } from "../components/TaskLibrary";
 import { TaskAssignmentModal } from "../components/TaskAssignmentModal";
 import { BulkActionsBar } from "../components/BulkActionsBar";
+import { SettingsModal } from "../components/SettingsModal";
 import { DayData, Task } from "../components/DayCard";
 import { StatsPanel } from "../components/StatsPanel";
 import { useTasksAPI, type TaskDefinition } from "../hooks/useTasksAPI";
@@ -37,6 +38,7 @@ export function JournalTracker() {
     null,
   );
   const [editingNoteDay, setEditingNoteDay] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Selection state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -665,6 +667,14 @@ export function JournalTracker() {
             />
             <div className="h-8 w-px bg-[#E8DCC4] hidden md:block" />
             <ViewToggle view={view} onChange={setView} />
+            <div className="h-8 w-px bg-[#E8DCC4] hidden md:block" />
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 bg-[#FFFBF5] border border-[#E8DCC4] hover:bg-[#E8DCC4]/30 rounded-full text-[#8B7355] hover:text-[#2C2416] transition-colors shadow-sm"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
@@ -809,6 +819,11 @@ export function JournalTracker() {
           initialContent={notes[editingNoteDay] || ""}
         />
       )}
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
     </div>
   );
 }
