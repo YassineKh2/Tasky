@@ -117,7 +117,12 @@ export function JournalTracker() {
               const dayOfWeek = date.getDay();
 
               // Check if this task should appear on this day
-              if (task.recurringDays.includes(dayOfWeek)) {
+              // AND if this date is within the task's active range
+              if (
+                task.recurringDays.includes(dayOfWeek) &&
+                dateStr >= task.startDate &&
+                (!task.endDate || dateStr <= task.endDate)
+              ) {
                 // Create a virtual assignment (UI-only, not persisted to DB)
                 generatedAssignments.push({
                   id: `virtual-${task.id}-${dateStr}`,
@@ -306,6 +311,8 @@ export function JournalTracker() {
     baselineDuration: number;
     isRecurring: boolean;
     recurringDays: number[];
+    startDate: string;
+    endDate: string | null;
   }) => {
     try {
       await createTask(data);

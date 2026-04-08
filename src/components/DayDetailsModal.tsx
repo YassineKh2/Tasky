@@ -9,6 +9,8 @@ interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;
+  endDate: string | null;
 }
 
 interface TaskAssignment {
@@ -102,8 +104,12 @@ export function DayDetailsModal({
   // Determine tasks for this day
   const dayTasks = taskDefinitions
     .filter((def) => {
-      // Check if it's a recurring day for this task
-      if (def.isRecurring && def.recurringDays.includes(dayOfWeek)) return true;
+      // Check if it's a recurring day for this task AND within its date range
+      if (def.isRecurring && def.recurringDays.includes(dayOfWeek)) {
+        if (dateStr >= def.startDate && (!def.endDate || dateStr <= def.endDate)) {
+          return true;
+        }
+      }
       // Check if there is an assignment for this day specifically
       return dayAssignments.some((a) => a.taskId === def.id);
     })

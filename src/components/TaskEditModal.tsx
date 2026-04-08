@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Clock, Repeat } from "lucide-react";
+import { X, Check, Clock, Repeat, Calendar } from "lucide-react";
+
+const getLocalDateStr = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 interface TaskDefinition {
   id: string;
   text: string;
@@ -10,6 +18,8 @@ interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;
+  endDate: string | null;
 }
 interface TaskEditModalProps {
   isOpen: boolean;
@@ -30,6 +40,9 @@ export function TaskEditModal({
   const [recurringDays, setRecurringDays] = useState<number[]>(
     task.recurringDays,
   );
+  const [startDate, setStartDate] = useState(task.startDate || getLocalDateStr(new Date()));
+  const [endDate, setEndDate] = useState<string>(task.endDate || "");
+  const [hasEndDate, setHasEndDate] = useState(!!task.endDate);
   const weekDays = [
     {
       label: "S",
@@ -75,6 +88,8 @@ export function TaskEditModal({
       baselineDuration: duration,
       isRecurring,
       recurringDays: isRecurring ? recurringDays : [],
+      startDate: isRecurring ? startDate : task.startDate,
+      endDate: isRecurring && hasEndDate && endDate ? endDate : null,
     });
     onClose();
   };
@@ -208,6 +223,53 @@ export function TaskEditModal({
                           {day.label}
                         </button>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Start & End Date Pickers (only when recurring) */}
+                  {isRecurring && (
+                    <div className="mt-4 space-y-4">
+                      {/* Start Date */}
+                      <div>
+                        <label className="flex items-center gap-2 font-serif-text text-xs font-bold text-[#8B7355] mb-1.5 uppercase tracking-wider">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Tracking Start Date
+                        </label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full bg-white border border-[#E8DCC4] rounded-lg px-3 py-2 font-serif-text text-sm text-[#2C2416] focus:border-[#2C2416] outline-none"
+                        />
+                      </div>
+
+                      {/* End Date Toggle + Picker */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="font-serif-text text-xs font-bold text-[#8B7355] uppercase tracking-wider">
+                            End Date
+                          </label>
+                          <button
+                            onClick={() => setHasEndDate(!hasEndDate)}
+                            className={`w-10 h-5 rounded-full p-0.5 transition-colors ${hasEndDate ? "bg-[#2C2416]" : "bg-[#E8DCC4]"}`}
+                          >
+                            <div
+                              className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${hasEndDate ? "translate-x-5" : "translate-x-0"}`}
+                            />
+                          </button>
+                        </div>
+                        {hasEndDate ? (
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            min={startDate}
+                            className="w-full bg-white border border-[#E8DCC4] rounded-lg px-3 py-2 font-serif-text text-sm text-[#2C2416] focus:border-[#2C2416] outline-none"
+                          />
+                        ) : (
+                          <p className="text-xs text-[#8B7355] italic">Forever (no end date)</p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

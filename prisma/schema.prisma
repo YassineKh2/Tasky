@@ -18,6 +18,8 @@ model TaskDefinition {
   baselineDuration Int                // in minutes
   isRecurring      Boolean            @default(false)
   recurringDays    String             // JSON array of day numbers (0-6), e.g., "[1,2,3,4,5]"
+  startDate        String             @default("2026-01-14") // ISO date "YYYY-MM-DD" - when tracking begins
+  endDate          String?            // ISO date "YYYY-MM-DD" - when tracking ends, null = forever
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   assignments      TaskAssignment[]

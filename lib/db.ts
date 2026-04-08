@@ -31,6 +31,8 @@ export const taskDefinitionService = {
     baselineDuration: number;
     isRecurring: boolean;
     recurringDays: number[];
+    startDate?: string;
+    endDate?: string | null;
   }) {
     return await prisma.taskDefinition.create({
       data: {
@@ -39,6 +41,8 @@ export const taskDefinitionService = {
         baselineDuration: data.baselineDuration,
         isRecurring: data.isRecurring,
         recurringDays: JSON.stringify(data.recurringDays),
+        startDate: data.startDate,
+        endDate: data.endDate,
       },
     });
   },
@@ -52,6 +56,8 @@ export const taskDefinitionService = {
       baselineDuration: number;
       isRecurring: boolean;
       recurringDays: number[];
+      startDate: string;
+      endDate: string | null;
     }>,
   ) {
     const updateData: any = { ...data };

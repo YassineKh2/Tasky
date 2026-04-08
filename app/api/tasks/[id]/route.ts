@@ -52,6 +52,8 @@ export async function PUT(
       baselineDuration: body.baselineDuration,
       isRecurring: body.isRecurring,
       recurringDays: body.recurringDays,
+      startDate: body.startDate,
+      endDate: body.endDate,
     });
 
     return NextResponse.json({

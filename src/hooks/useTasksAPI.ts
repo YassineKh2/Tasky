@@ -7,6 +7,8 @@ export interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;   // ISO date "YYYY-MM-DD"
+  endDate: string | null; // ISO date "YYYY-MM-DD" or null = forever
 }
 
 interface UseTasksAPIReturn {

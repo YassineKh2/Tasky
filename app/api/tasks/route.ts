@@ -40,6 +40,8 @@ export async function POST(request: Request) {
       baselineDuration: body.baselineDuration,
       isRecurring: body.isRecurring,
       recurringDays: body.recurringDays || [],
+      startDate: body.startDate,
+      endDate: body.endDate,
     });
 
     // Parse JSON fields

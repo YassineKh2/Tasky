@@ -6,13 +6,27 @@ interface ActivityHeatmapProps {
   daysOff: string[];
   daysOffDetails?: Record<string, { type: string; reason: string | null }>;
   onDayClick?: (dateStr: string) => void;
+  startDate?: string; // ISO date "YYYY-MM-DD" - earliest task start date
 }
+
+const getLocalDateStr = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
 
 export function ActivityHeatmap({
   data,
   daysOff,
   daysOffDetails,
   onDayClick,
+  startDate: startDateProp,
 }: ActivityHeatmapProps) {
   const [hoveredData, setHoveredData] = useState<{
     x: number;
@@ -26,13 +40,13 @@ export function ActivityHeatmap({
     isFuture: boolean;
   } | null>(null);
 
-  // Generate a full year (52 weeks) starting from Jan 14th 2026
-  const START_DATE = new Date("2026-01-14");
+  // Use the provided start date or fall back to Jan 14th 2026
+  const START_DATE = startDateProp ? parseLocalDate(startDateProp) : parseLocalDate("2026-01-14");
+  START_DATE.setHours(0, 0, 0, 0);
   const dates: Date[] = [];
 
-  // We want to fill 52 columns * 7 rows = 364 days
-  // Or simply fill until the end of 2026 to look complete
-  const END_DATE = new Date("2026-12-31");
+  // Fill until end of the start year
+  const END_DATE = new Date(START_DATE.getFullYear(), 11, 31);
 
   const current = new Date(START_DATE);
   while (current <= END_DATE) {
@@ -134,7 +148,7 @@ export function ActivityHeatmap({
           Activity Log
         </h3>
         <span className="text-xs font-serif-text text-[#8B7355] italic">
-          2026
+          {START_DATE.getFullYear()}
         </span>
       </div>
 
@@ -153,7 +167,7 @@ export function ActivityHeatmap({
                   );
                 }
 
-                const dateStr = date.toISOString().split("T")[0];
+                const dateStr = getLocalDateStr(date);
                 const dayData = data.find((d) => d.date === dateStr);
                 const level = dayData ? dayData.level : 0;
                 const count = dayData ? dayData.count : 0;

@@ -12,6 +12,8 @@ interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;
+  endDate: string | null;
 }
 
 interface TaskAssignment {
@@ -55,22 +57,41 @@ export function MonthCalendar({
     null,
   );
   const [viewingDayStr, setViewingDayStr] = useState<string | null>(null);
-  const STATS_START_DATE = "2026-01-14";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Compute the earliest task start date to use as tracking boundary
+  const earliestStartDate = taskDefinitions.length > 0
+    ? taskDefinitions.reduce((earliest, def) => {
+        return def.startDate < earliest ? def.startDate : earliest;
+      }, taskDefinitions[0].startDate)
+    : "9999-12-31";
+
   // Calculate completion level for color coding
   const getCompletionLevel = (day: DayData): number => {
     if (day.isDayOff) return -1; // Special case for rest days
-    // Check if date is before tracking start date
-    if (day.id < STATS_START_DATE) return -2; // Before tracking (neutral)
+    // Check if date is before any tracking start date
+    if (day.id < earliestStartDate) return -2; // Before tracking (neutral)
     // Check if date is in the future
     const dayDate = day.fullDate ? new Date(day.fullDate) : new Date(day.id);
     dayDate.setHours(0, 0, 0, 0);
     if (dayDate > today) return -2; // Future date (neutral)
+    
+    // Check if any task is actually expected on this day
+    const dayOfWeek = dayDate.getDay();
+    const hasExpectedTasks = taskDefinitions.some((def) => {
+      if (!def.isRecurring || !def.recurringDays.includes(dayOfWeek)) return false;
+      return day.id >= def.startDate && (!def.endDate || day.id <= def.endDate);
+    });
+    // Also check for one-off assignments
+    const hasAssignments = day.tasks.length > 0;
+    
+    if (!hasExpectedTasks && !hasAssignments) return -2; // No tasks expected (neutral)
+    
     const completedCount = day.tasks.filter((t) => t.completed).length;
     const totalCount = day.tasks.length;
-    // Missed day: has tasks but none completed (only for past dates within tracking period)
-    if (totalCount > 0 && completedCount === 0) return 0;
+    // Missed day: has tasks but not all of them were completed
+    if (totalCount > 0 && completedCount < totalCount) return 0;
     // Return completed count (1-5+)
     return Math.min(completedCount, 5);
   };

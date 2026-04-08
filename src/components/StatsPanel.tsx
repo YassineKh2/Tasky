@@ -15,6 +15,8 @@ interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;
+  endDate: string | null;
 }
 
 interface TaskAssignment {
@@ -62,7 +64,13 @@ export function StatsPanel({
   };
 
   const calculateStats = () => {
-    const statsStartDate = new Date("2026-01-14");
+    // Compute the global start date as the earliest task startDate
+    const statsStartDate = taskDefinitions.length > 0
+      ? new Date(taskDefinitions.reduce((earliest, def) => {
+          return def.startDate < earliest ? def.startDate : earliest;
+        }, taskDefinitions[0].startDate))
+      : new Date();
+    statsStartDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -117,8 +125,6 @@ export function StatsPanel({
       const dayOffDetail = daysOffDetails?.[dateStr];
       const dayOffType = dayOffDetail?.type || "REST";
       
-      let isIgnored = false;
-
       // Skip if marked as rest day
       if (daysOff.includes(dateStr)) {
         dayStatsList.push({
@@ -136,7 +142,6 @@ export function StatsPanel({
           (dayOffType === "OTHER" && userSettings?.countOtherDaysAsMissing);
 
         if (!shouldCountMissed) {
-          isIgnored = true;
           current.setDate(current.getDate() + 1);
           continue;
         }
@@ -145,10 +150,13 @@ export function StatsPanel({
       // Identify expected tasks for this day
       const expectedTaskIds = new Set<string>();
 
-      // Add recurring tasks
+      // Add recurring tasks (only if this date is within the task's active range)
       taskDefinitions.forEach((def) => {
         if (def.isRecurring && def.recurringDays.includes(dayOfWeek)) {
-          expectedTaskIds.add(def.id);
+          // Check if this date is within the task's start/end range
+          if (dateStr >= def.startDate && (!def.endDate || dateStr <= def.endDate)) {
+            expectedTaskIds.add(def.id);
+          }
         }
       });
 
@@ -337,6 +345,13 @@ export function StatsPanel({
       .map(([name, value]) => ({ name, value }))
       .filter((d) => d.value > 0);
 
+    const getLocalDateStrUtil = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     return {
       global: {
         totalHours: Math.round((globalTotalMinutes / 60) * 10) / 10,
@@ -350,6 +365,7 @@ export function StatsPanel({
         trendData,
         distributionData,
       },
+      statsStartDateStr: getLocalDateStrUtil(statsStartDate),
       tasks: taskDefinitions.map((def) => {
         const stat = taskStatsMap.get(def.id)!;
         return {
@@ -365,7 +381,7 @@ export function StatsPanel({
     };
   };
 
-  const { global: globalStats, tasks: taskStats, charts } = calculateStats();
+  const { global: globalStats, tasks: taskStats, charts, statsStartDateStr } = calculateStats();
 
   return (
     <motion.div
@@ -426,6 +442,7 @@ export function StatsPanel({
         daysOff={daysOff}
         daysOffDetails={daysOffDetails}
         onDayClick={setSelectedDayStr}
+        startDate={statsStartDateStr}
       />
 
       <DayDetailsModal

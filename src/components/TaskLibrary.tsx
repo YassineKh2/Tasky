@@ -18,6 +18,8 @@ interface TaskDefinition {
   baselineDuration: number;
   isRecurring: boolean;
   recurringDays: number[];
+  startDate: string;
+  endDate: string | null;
 }
 interface TaskLibraryProps {
   tasks: TaskDefinition[];
