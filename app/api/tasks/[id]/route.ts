@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { taskDefinitionService } from "@/lib/db";
+import { getAuthUserId } from "@/lib/auth";
 
 /**
  * GET /api/tasks/[id]
@@ -10,8 +11,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const task = await taskDefinitionService.getById(id);
+    const task = await taskDefinitionService.getById(id, userId);
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -43,10 +49,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
 
-    const task = await taskDefinitionService.update(id, {
+    const task = await taskDefinitionService.update(id, userId, {
       text: body.text,
       description: body.description,
       baselineDuration: body.baselineDuration,
@@ -55,6 +66,10 @@ export async function PUT(
       startDate: body.startDate,
       endDate: body.endDate,
     });
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
     return NextResponse.json({
       ...task,
@@ -81,8 +96,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    await taskDefinitionService.delete(id);
+    const result = await taskDefinitionService.delete(id, userId);
+
+    if (!result) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error) {
     console.error("Error deleting task:", error);

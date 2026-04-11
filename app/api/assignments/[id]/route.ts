@@ -1,43 +1,25 @@
 import { NextResponse } from "next/server";
 import { taskAssignmentService } from "@/lib/db";
-
-/**
- * GET /api/assignments/[id]
- * Get a specific task assignment
- */
-export async function GET(
-  _request: Request,
-  _context: { params: Promise<{ id: string }> },
-) {
-  try {
-    // Note: Prisma doesn't provide a direct getById for assignments
-    // This would need to be added to the db service or use findUnique if id is unique
-    return NextResponse.json(
-      { error: "Use query parameters to filter assignments" },
-      { status: 400 },
-    );
-  } catch (error) {
-    console.error("Error fetching assignment:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch assignment" },
-      { status: 500 },
-    );
-  }
-}
+import { getAuthUserId } from "@/lib/auth";
 
 /**
  * PUT /api/assignments/[id]
- * Update a task assignment
+ * Update a task assignment (verifies ownership through task)
  */
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
 
-    const assignment = await taskAssignmentService.update(id, {
+    const assignment = await taskAssignmentService.update(id, userId, {
       durationOverride: body.durationOverride,
       completed: body.completed,
       loggedHours: body.loggedHours,
@@ -55,15 +37,20 @@ export async function PUT(
 
 /**
  * DELETE /api/assignments/[id]
- * Delete a task assignment
+ * Delete a task assignment (verifies ownership through task)
  */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    await taskAssignmentService.delete(id);
+    await taskAssignmentService.delete(id, userId);
     return NextResponse.json({ message: "Assignment deleted successfully" });
   } catch (error) {
     console.error("Error deleting assignment:", error);

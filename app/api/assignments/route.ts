@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { taskAssignmentService } from "@/lib/db";
+import { getAuthUserId } from "@/lib/auth";
 
 /**
  * GET /api/assignments
- * Get assignments with optional filters
+ * Get assignments with optional filters, scoped to user
  * Query params: startDate, endDate, dateStr, taskId
  */
 export async function GET(request: Request) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -17,13 +23,14 @@ export async function GET(request: Request) {
     let assignments;
 
     if (dateStr) {
-      assignments = await taskAssignmentService.getByDate(dateStr);
+      assignments = await taskAssignmentService.getByDate(dateStr, userId);
     } else if (taskId) {
-      assignments = await taskAssignmentService.getByTaskId(taskId);
+      assignments = await taskAssignmentService.getByTaskId(taskId, userId);
     } else if (startDate && endDate) {
       assignments = await taskAssignmentService.getByDateRange(
         startDate,
         endDate,
+        userId,
       );
     } else {
       return NextResponse.json(
@@ -47,13 +54,18 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/assignments
- * Create a new task assignment
+ * Create a new task assignment (verifies task ownership)
  */
 export async function POST(request: Request) {
   try {
+    const userId = await getAuthUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
-    const assignment = await taskAssignmentService.create({
+    const assignment = await taskAssignmentService.create(userId, {
       taskId: body.taskId,
       dateStr: body.dateStr,
       durationOverride: body.durationOverride,

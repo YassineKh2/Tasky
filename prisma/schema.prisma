@@ -10,9 +10,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User Settings - Singleton table for global defaults
+// User Settings - Per-user settings
 model UserSettings {
-  id                           String   @id @default("default")
+  id                           String   @id @default(cuid())
+  userId                       String   @unique
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   countRestDaysAsMissing       Boolean  @default(false)
   countVacationDaysAsMissing   Boolean  @default(false)
   countOtherDaysAsMissing      Boolean  @default(false)
@@ -24,17 +26,23 @@ model UserSettings {
 
 // User Model - Application Users
 model User {
-  id        String   @id @default(cuid())
-  fullName  String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(cuid())
+  fullName        String
+  email           String           @unique
+  password        String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tasks           TaskDefinition[]
+  daysOff         DayOff[]
+  dayNotes        DayNotes[]
+  settings        UserSettings?
 }
 
 // Task Definition - Templates for recurring or one-off tasks
 model TaskDefinition {
   id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   text             String
   description      String?
   baselineDuration Int                // in minutes
@@ -46,6 +54,8 @@ model TaskDefinition {
   updatedAt        DateTime           @updatedAt
   assignments      TaskAssignment[]
   trackingHistory  TaskTracking[]
+
+  @@index([userId])
 }
 
 // Task Assignment - Individual task instances assigned to specific dates
@@ -68,20 +78,30 @@ model TaskAssignment {
 // Day Off - Track days marked as off/incomplete
 model DayOff {
   id        String   @id @default(cuid())
-  dateStr   String   @unique // ISO date format "YYYY-MM-DD"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateStr   String   // ISO date format "YYYY-MM-DD"
   type      String   @default("REST") // "REST" | "VACATION" | "OTHER"
   reason    String?  // Empty unless type is "OTHER"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([userId, dateStr])
+  @@index([userId])
 }
 
 // Day Notes - Store notes for each day
 model DayNotes {
   id        String   @id @default(cuid())
-  dateStr   String   @unique // ISO date format "YYYY-MM-DD"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateStr   String   // ISO date format "YYYY-MM-DD"
   content   String   // Plain text note content
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([userId, dateStr])
+  @@index([userId])
 }
 
 // Task Tracking - Detailed tracking of task completion and hours
@@ -102,5 +122,3 @@ model TaskTracking {
   @@index([assignmentId])
   @@index([taskId])
 }
-
-
