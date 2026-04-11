@@ -15,6 +15,7 @@ interface TaskItemProps {
   onDurationChange: (assignmentId: string, duration: number) => void;
   onRemove?: (assignmentId: string) => void;
   disabled?: boolean;
+  canRemoveDuplicate?: boolean;
 }
 export function TaskItem({
   task,
@@ -22,6 +23,7 @@ export function TaskItem({
   onDurationChange,
   onRemove,
   disabled = false,
+  canRemoveDuplicate = false,
 }: TaskItemProps) {
   return (
     <motion.div
@@ -85,10 +87,10 @@ export function TaskItem({
             </div>
 
             {/* Remove Button or Recurring Indicator */}
-            {task.isRecurring ? (
+            {task.isRecurring && !canRemoveDuplicate ? (
               <div
                 className="opacity-50 p-1 text-[#8B7355] cursor-help"
-                title="Recurring task - cannot be deleted from day view"
+                title="Recurring task"
               >
                 <RotateCw className="w-4 h-4" />
               </div>
@@ -101,7 +103,7 @@ export function TaskItem({
                     onRemove(task.assignmentId);
                   }}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded text-[#8B7355] hover:text-red-600 transition-all"
-                  title="Remove task from this day"
+                  title={canRemoveDuplicate ? "Remove duplicate from this day" : "Remove task from this day"}
                 >
                   <X className="w-4 h-4" />
                 </button>

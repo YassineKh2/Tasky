@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { PenTool, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { PenTool, Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -10,14 +10,37 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) return;
     setIsLoading(true);
-    // UI only, mock load
-    setTimeout(() => setIsLoading(false), 1000);
+    setApiError("");
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to register");
+      }
+
+      // Success! Redirect to login (replace is generally better for auth flows)
+      window.location.replace("/login");
+    } catch (err: any) {
+      setApiError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -102,13 +125,20 @@ export default function RegisterPage() {
                     <Lock className="h-5 w-5 text-[#8B7355]/50 group-focus-within:text-[#2C2416] transition-colors" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-11 pr-4 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
+                    className="w-full pl-11 pr-12 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8B7355]/50 hover:text-[#2C2416] transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -122,17 +152,29 @@ export default function RegisterPage() {
                     <Lock className="h-5 w-5 text-[#8B7355]/50 group-focus-within:text-[#2C2416] transition-colors" />
                   </div>
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-11 pr-4 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
+                    className="w-full pl-11 pr-12 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8B7355]/50 hover:text-[#2C2416] transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
                 {password && confirmPassword && password !== confirmPassword && (
                    <p className="mt-2 text-xs font-serif-text text-[#8B7355] font-bold italic">
                      Passwords do not match.
+                   </p>
+                )}
+                {apiError && (
+                   <p className="mt-2 text-xs font-serif-text text-red-700 font-bold italic">
+                     {apiError}
                    </p>
                 )}
               </div>

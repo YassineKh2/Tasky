@@ -2,19 +2,40 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { PenTool, Mail, Lock, ArrowRight } from "lucide-react";
+import { PenTool, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // UI only, mock load
-    setTimeout(() => setIsLoading(false), 1000);
+    setApiError("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to login");
+      }
+
+      window.location.replace("/");
+    } catch (err: any) {
+      setApiError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -79,19 +100,33 @@ export default function LoginPage() {
                     <Lock className="h-5 w-5 text-[#8B7355]/50 group-focus-within:text-[#2C2416] transition-colors" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-11 pr-4 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
+                    className="w-full pl-11 pr-12 py-3 bg-white/60 border-b-2 border-[#E8DCC4] focus:border-[#2C2416] font-serif-text text-lg text-[#2C2416] placeholder-[#8B7355]/40 outline-none transition-all focus:bg-white rounded-t-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#8B7355]/50 hover:text-[#2C2416] transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
                 <div className="mt-3 text-right">
                   <button type="button" className="text-sm font-serif-text text-[#8B7355] hover:text-[#2C2416] transition-colors italic hover:underline">
                     Forgot your password?
                   </button>
                 </div>
+                {apiError && (
+                   <div className="mt-3 text-center">
+                     <p className="text-sm font-serif-text text-red-700 font-bold italic">
+                       {apiError}
+                     </p>
+                   </div>
+                )}
               </div>
 
               {/* Submit Button */}

@@ -170,15 +170,20 @@ export function DayCard({
             </div>
           ) : day.tasks.length > 0 ? (
             <div className="space-y-1">
-              {day.tasks.map((task) => (
-                <TaskItem
-                  key={task.assignmentId}
-                  task={task}
-                  onToggle={onToggleTask}
-                  onDurationChange={onDurationChange}
-                  onRemove={onRemoveTask}
-                />
-              ))}
+              {day.tasks.map((task) => {
+                // Count how many times this task id appears on this day
+                const sameTaskCount = day.tasks.filter((t) => t.id === task.id).length;
+                return (
+                  <TaskItem
+                    key={task.assignmentId}
+                    task={task}
+                    onToggle={onToggleTask}
+                    onDurationChange={onDurationChange}
+                    onRemove={onRemoveTask}
+                    canRemoveDuplicate={sameTaskCount > 1}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div

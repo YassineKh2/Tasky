@@ -45,6 +45,8 @@ export function JournalTracker() {
   // Selection state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  // User state
+  const [user, setUser] = useState<{ fullName: string; email: string } | null>(null);
 
   // API hooks
   const { settings, updateSettings } = useSettingsAPI();
@@ -158,6 +160,13 @@ export function JournalTracker() {
       );
       const startStr = getLocalDateStr(start);
       const endStr = getLocalDateStr(end);
+
+      // Fetch user profile session
+      const userRes = await fetch("/api/auth/me");
+      if (userRes.ok) {
+        const { user: fetchedUser } = await userRes.json();
+        setUser(fetchedUser);
+      }
 
       await Promise.all([
         fetchTasks(),
@@ -520,11 +529,31 @@ export function JournalTracker() {
   const handleMarkTodayComplete = async () => {
     const todayStr = getLocalDateStr(new Date());
     // Use allAssignments to include virtual (recurring) tasks
-    const todayAssignments = allAssignments.filter(
+    let todayAssignments = allAssignments.filter(
       (a) => a.dateStr === todayStr,
     );
+    
+    // Support out-of-bounds click by safely looking up what's truly in the DB first
+    if (todayAssignments.length === 0) {
+      if (isTodayComplete) return; 
+      try {
+        const res = await fetch(`/api/assignments?startDate=${todayStr}&endDate=${todayStr}`);
+        const realAssignmentsFromDB = res.ok ? await res.json() : [];
+        
+        todayAssignments = generateRecurringTasksForView(
+          taskDefinitions,
+          realAssignmentsFromDB,
+          todayStr,
+          todayStr
+        ).filter((a) => a.dateStr === todayStr);
+      } catch (err) {
+        console.error("Failed to fetch fresh assignments for today", err);
+        return;
+      }
+    }
+
     if (todayAssignments.length === 0) return;
-    const allComplete = todayAssignments.every((a) => a.completed);
+    const allComplete = isTodayInBounds ? todayAssignments.every((a) => a.completed) : isTodayComplete;
 
     try {
       // Separate real and virtual assignments
@@ -560,6 +589,9 @@ export function JournalTracker() {
           }),
         );
       }
+      
+      setIsTodayComplete(!allComplete);
+      
     } catch (err) {
       console.error("Failed to mark today complete", err);
     }
@@ -667,8 +699,36 @@ export function JournalTracker() {
     });
   };
   const todayTasks = getTasksForDate(new Date());
-  const isTodayComplete =
-    todayTasks.length > 0 && todayTasks.every((t) => t.completed);
+
+  const [isTodayComplete, setIsTodayComplete] = useState(false);
+  const [isTodayInBounds, setIsTodayInBounds] = useState(true);
+
+  useEffect(() => {
+    const start = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1,
+    );
+    const end = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 2,
+      0,
+    );
+    const today = new Date();
+    // Normalize safely to start of day
+    const normalizedToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const normalizedStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    const normalizedEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+    
+    // Check if the current view's loaded bounding box covers today
+    const inBounds = normalizedToday >= normalizedStart && normalizedToday <= normalizedEnd;
+    setIsTodayInBounds(inBounds);
+
+    // Only update our global memory if today is actually cleanly loaded right now
+    if (inBounds) {
+      setIsTodayComplete(todayTasks.length > 0 && todayTasks.every((t) => t.completed));
+    }
+  }, [currentDate, todayTasks]);
   return (
     <div className="min-h-screen bg-paper-texture p-4 md:p-8 font-serif-text overflow-x-hidden">
       <div className="max-w-7xl mx-auto transition-all duration-300">
@@ -679,10 +739,10 @@ export function JournalTracker() {
               <PenTool className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-handwriting text-5xl font-bold text-[#2C2416] leading-none">
-                Tasky
+              <h1 className="font-handwriting text-5xl font-bold text-[#2C2416] leading-none capitalize">
+                {user ? `Hello ${user.fullName.split(' ')[0]}` : "Tasky"}
               </h1>
-              <p className="text-[#8B7355] italic text-lg">
+              <p className="text-[#8B7355] italic text-lg mt-1">
                 Focus on what matters, one day at a time.
               </p>
             </div>
@@ -801,6 +861,15 @@ export function JournalTracker() {
         onMarkComplete={handleBulkComplete}
       />
 
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        updateSettings={updateSettings}
+        user={user}
+      />
+
       {/* Modals */}
       <TaskCreationModal
         isOpen={isCreateModalOpen}
@@ -859,12 +928,7 @@ export function JournalTracker() {
         />
       )}
 
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        settings={settings}
-        updateSettings={updateSettings}
-      />
+
     </div>
   );
 }
