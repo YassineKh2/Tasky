@@ -1,6 +1,6 @@
 "use client";
 
-import { JournalTracker } from "../src/pages-old/JournalTracker";
+import { JournalTracker } from "../src/components/JournalTracker";
 
 export default function Home() {
   return <JournalTracker />;

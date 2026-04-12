@@ -49,7 +49,7 @@ A beautiful, journal-style task tracking and management application built with N
 
 4. Create a `.env.local` file:
    ```env
-   DATABASE_URL="file:./prisma/prisma/dev.db"
+   DATABASE_URL="file:./dev.db or your db url"
    JWT_SECRET="your-secret-key"
    ```
 
