@@ -227,6 +227,7 @@ export function JournalTracker() {
             completed: assignment.completed,
             duration: assignment.durationOverride || def.baselineDuration,
             isRecurring: def.isRecurring,
+            recurringDays: def.recurringDays,
           } as Task;
         })
         .filter((t): t is Task => t !== null);

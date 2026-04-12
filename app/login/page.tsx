@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { PenTool, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { PenTool, Mail, Lock, ArrowRight, Eye, EyeOff, X } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [showForgotPopup, setShowForgotPopup] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +117,11 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <div className="mt-3 text-right">
-                  <button type="button" className="text-sm font-serif-text text-[#8B7355] hover:text-[#2C2416] transition-colors italic hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPopup(true)}
+                    className="text-sm font-serif-text text-[#8B7355] hover:text-[#2C2416] transition-colors italic hover:underline"
+                  >
                     Forgot your password?
                   </button>
                 </div>
@@ -174,6 +179,76 @@ export default function LoginPage() {
           </p>
         </motion.div>
       </div>
+
+      {/* Forgot Password Popup */}
+      <AnimatePresence>
+        {showForgotPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowForgotPopup(false)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative bg-[#FFFBF5] rounded-2xl shadow-2xl border border-[#E8DCC4] p-8 max-w-sm w-full paper-shadow"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setShowForgotPopup(false)}
+                className="absolute top-4 right-4 text-[#8B7355]/60 hover:text-[#2C2416] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Icon */}
+              <div className="flex justify-center mb-5">
+                <div className="p-3 bg-[#2C2416]/10 rounded-full">
+                  <Mail className="w-8 h-8 text-[#2C2416]" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h3 className="font-handwriting text-3xl text-[#2C2416] text-center mb-4">
+                Password Recovery
+              </h3>
+
+              {/* Message */}
+              <p className="font-serif-text text-[#8B7355] text-center text-base leading-relaxed mb-5">
+                To recover your password, please contact us at:
+              </p>
+
+              {/* Email address */}
+              <div className="bg-white/80 border border-[#E8DCC4] rounded-xl py-3 px-4 text-center mb-6">
+                <a
+                  href="mailto:yassinekhemiri.dev@gmail.com"
+                  className="font-serif-text text-[#2C2416] font-bold text-lg hover:underline underline-offset-4 decoration-2"
+                >
+                  yassinekhemiri.dev@gmail.com
+                </a>
+              </div>
+
+              {/* Close action */}
+              <button
+                onClick={() => setShowForgotPopup(false)}
+                className="w-full py-3 rounded-xl bg-[#2C2416] text-[#FAF7F0] font-serif-text font-bold text-base hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

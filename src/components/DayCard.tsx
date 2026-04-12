@@ -11,6 +11,7 @@ export interface Task {
   duration: number;
   assignmentId: string;
   isRecurring?: boolean;
+  recurringDays?: number[];
 }
 export interface DayData {
   id: string;
@@ -173,6 +174,11 @@ export function DayCard({
               {day.tasks.map((task) => {
                 // Count how many times this task id appears on this day
                 const sameTaskCount = day.tasks.filter((t) => t.id === task.id).length;
+                
+                // Check if this is a normally occurring day for this recurring task
+                const dayOfWeek = day.fullDate ? day.fullDate.getDay() : new Date(day.id).getDay();
+                const isNormallyRecurring = task.isRecurring && task.recurringDays?.includes(dayOfWeek);
+
                 return (
                   <TaskItem
                     key={task.assignmentId}
@@ -180,7 +186,7 @@ export function DayCard({
                     onToggle={onToggleTask}
                     onDurationChange={onDurationChange}
                     onRemove={onRemoveTask}
-                    canRemoveDuplicate={sameTaskCount > 1}
+                    canRemoveDuplicate={sameTaskCount > 1 || (task.isRecurring && !isNormallyRecurring)}
                   />
                 );
               })}

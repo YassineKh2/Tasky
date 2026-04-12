@@ -8,6 +8,7 @@ interface Task {
   duration: number;
   assignmentId: string;
   isRecurring?: boolean;
+  recurringDays?: number[];
 }
 interface TaskItemProps {
   task: Task;
