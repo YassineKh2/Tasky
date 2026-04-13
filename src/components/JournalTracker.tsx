@@ -868,7 +868,6 @@ export function JournalTracker() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         updateSettings={updateSettings}
-        user={user}
       />
 
       {/* Modals */}

@@ -5,6 +5,12 @@ export interface DayOffDetails {
   reason: string | null;
 }
 
+interface DayOffResponse {
+  dateStr: string;
+  type?: string;
+  reason?: string | null;
+}
+
 interface UseDaysOffAPIReturn {
   daysOff: string[];
   daysOffDetails: Record<string, DayOffDetails>;
@@ -34,8 +40,8 @@ export function useDaysOffAPI(): UseDaysOffAPIReturn {
         const res = await fetch(`/api/days-off?${params}`);
         if (!res.ok)
           throw new Error(`Failed to fetch days off: ${res.statusText}`);
-        const data = await res.json();
-        setDaysOffState(data.map((d: any) => d.dateStr));
+        const data: DayOffResponse[] = await res.json();
+        setDaysOffState(data.map((d) => d.dateStr));
         
         const details: Record<string, DayOffDetails> = {};
         for(const d of data) {

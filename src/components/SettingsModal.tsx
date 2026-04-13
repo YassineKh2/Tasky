@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Settings, Lock, CalendarOff, SkipForward, LogOut, Eye, EyeOff } from "lucide-react";
+import { UserSettings } from "../hooks/useSettingsAPI";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: any;
-  updateSettings: (data: any) => Promise<any>;
-  user?: { fullName: string; email: string } | null;
+  settings: UserSettings | null;
+  updateSettings: (data: Partial<UserSettings>) => Promise<any>;
 }
 
-export function SettingsModal({ isOpen, onClose, settings, updateSettings, user }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, settings, updateSettings }: SettingsModalProps) {
   // Settings UI state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -46,8 +46,8 @@ export function SettingsModal({ isOpen, onClose, settings, updateSettings, user 
         setConfirmPassword("");
         setPasswordSuccess("");
       }, 2000);
-    } catch (err: any) {
-      setPasswordError(err.message);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsSavingPassword(false);
     }
