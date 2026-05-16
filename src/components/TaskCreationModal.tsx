@@ -273,7 +273,9 @@ export function TaskCreationModal({
                             className="w-full bg-white border border-[#E8DCC4] rounded-lg px-3 py-2 font-serif-text text-sm text-[#2C2416] focus:border-[#2C2416] outline-none"
                           />
                         ) : (
-                          <p className="text-xs text-[#8B7355] italic">Forever (no end date)</p>
+                          <p className="text-xs text-[#8B7355] italic">
+                            Forever (no end date)
+                          </p>
                         )}
                       </div>
                     </div>

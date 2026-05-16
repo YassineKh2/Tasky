@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle2, TrendingUp, Flame, Trophy } from "lucide-react";
 import { StatCard } from "./StatCard";
@@ -29,9 +29,6 @@ interface TaskAssignment {
 
 interface StatsPanelProps {
   taskDefinitions: TaskDefinition[];
-  assignments: TaskAssignment[];
-  daysOff: string[];
-  daysOffDetails?: Record<string, { type: string; reason: string | null }>;
   userSettings?: {
     countRestDaysAsMissing: boolean;
     countVacationDaysAsMissing: boolean;
@@ -40,20 +37,21 @@ interface StatsPanelProps {
     resetStreakAtVacationDay: boolean;
     resetStreakAtOtherDay: boolean;
   } | null;
-  notes?: Record<string, string>;
   onSaveNote?: (dateStr: string, content: string) => Promise<void>;
 }
 
 export function StatsPanel({
   taskDefinitions,
-  assignments,
-  daysOff,
-  daysOffDetails,
   userSettings,
-  notes = {},
   onSaveNote,
 }: StatsPanelProps) {
   const [selectedDayStr, setSelectedDayStr] = useState<string | null>(null);
+  
+  const [statsAssignments, setStatsAssignments] = useState<TaskAssignment[]>([]);
+  const [statsDaysOff, setStatsDaysOff] = useState<string[]>([]);
+  const [statsDaysOffDetails, setStatsDaysOffDetails] = useState<Record<string, { type: string; reason: string | null }>>({});
+  const [statsNotes, setStatsNotes] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // Helper to get local date string (YYYY-MM-DD)
   const getLocalDateStr = (date: Date): string => {
@@ -62,6 +60,61 @@ export function StatsPanel({
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatsData = async () => {
+      setIsLoading(true);
+      try {
+        const earliestStart = taskDefinitions.length > 0
+          ? taskDefinitions.reduce((earliest, def) => {
+              return def.startDate < earliest ? def.startDate : earliest;
+            }, taskDefinitions[0].startDate)
+          : getLocalDateStr(new Date());
+
+        const todayStr = getLocalDateStr(new Date());
+        
+        const [assignmentsRes, daysOffRes, notesRes] = await Promise.all([
+          fetch(`/api/assignments?startDate=${earliestStart}&endDate=${todayStr}`),
+          fetch(`/api/days-off?startDate=${earliestStart}&endDate=${todayStr}`),
+          fetch(`/api/day-notes?startDate=${earliestStart}&endDate=${todayStr}`)
+        ]);
+
+        if (!isMounted) return;
+
+        if (assignmentsRes.ok) {
+          setStatsAssignments(await assignmentsRes.json());
+        }
+        
+        if (daysOffRes.ok) {
+          const daysOffData = await daysOffRes.json();
+          const offDays = daysOffData.map((d: any) => d.dateStr);
+          const offDetails = daysOffData.reduce((acc: any, d: any) => ({
+            ...acc,
+            [d.dateStr]: { type: d.type, reason: d.reason }
+          }), {});
+          setStatsDaysOff(offDays);
+          setStatsDaysOffDetails(offDetails);
+        }
+
+        if (notesRes.ok) {
+          const notesData = await notesRes.json();
+          const notesMap = notesData.reduce((acc: any, n: any) => ({
+            ...acc,
+            [n.dateStr]: n.content
+          }), {});
+          setStatsNotes(notesMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats data", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    
+    fetchStatsData();
+    return () => { isMounted = false; };
+  }, [taskDefinitions]);
 
   const calculateStats = () => {
     // Compute the global start date as the earliest task startDate
@@ -122,11 +175,11 @@ export function StatsPanel({
       const dateStr = getLocalDateStr(current);
       const dayOfWeek = current.getDay();
 
-      const dayOffDetail = daysOffDetails?.[dateStr];
+      const dayOffDetail = statsDaysOffDetails?.[dateStr];
       const dayOffType = dayOffDetail?.type || "REST";
       
       // Skip if marked as rest day
-      if (daysOff.includes(dateStr)) {
+      if (statsDaysOff.includes(dateStr)) {
         dayStatsList.push({
           date: new Date(current),
           allCompleted: false, // will adjust later
@@ -161,7 +214,7 @@ export function StatsPanel({
       });
 
       // Add one-off assignments for this date
-      const dayAssignments = assignments.filter((a) => a.dateStr === dateStr);
+      const dayAssignments = statsAssignments.filter((a) => a.dateStr === dateStr);
       dayAssignments.forEach((a) => expectedTaskIds.add(a.taskId));
 
       let dailyCompletedCount = 0;
@@ -177,7 +230,7 @@ export function StatsPanel({
           if (!def) return;
 
           // Find assignment for this task on this day
-          const assignment = assignments.find(
+          const assignment = statsAssignments.find(
             (a) => a.taskId === taskId && a.dateStr === dateStr,
           );
 
@@ -383,6 +436,14 @@ export function StatsPanel({
 
   const { global: globalStats, tasks: taskStats, charts, statsStartDateStr } = calculateStats();
 
+  if (isLoading) {
+    return (
+      <div className="w-full h-[500px] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B7355]"></div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{
@@ -439,8 +500,8 @@ export function StatsPanel({
       {/* Heatmap Section */}
       <ActivityHeatmap
         data={charts.heatmapData}
-        daysOff={daysOff}
-        daysOffDetails={daysOffDetails}
+        daysOff={statsDaysOff}
+        daysOffDetails={statsDaysOffDetails}
         onDayClick={setSelectedDayStr}
         startDate={statsStartDateStr}
       />
@@ -450,12 +511,15 @@ export function StatsPanel({
         onClose={() => setSelectedDayStr(null)}
         dateStr={selectedDayStr}
         taskDefinitions={taskDefinitions}
-        assignments={assignments.filter((a) => a.dateStr === selectedDayStr)}
-        isRestDay={!!selectedDayStr && daysOff.includes(selectedDayStr)}
-        dayOffType={selectedDayStr && daysOffDetails ? daysOffDetails[selectedDayStr]?.type : undefined}
-        dayOffReason={selectedDayStr && daysOffDetails ? daysOffDetails[selectedDayStr]?.reason : undefined}
-        noteContent={selectedDayStr ? notes[selectedDayStr] || "" : ""}
-        onSaveNote={onSaveNote}
+        assignments={statsAssignments.filter((a) => a.dateStr === selectedDayStr)}
+        isRestDay={!!selectedDayStr && statsDaysOff.includes(selectedDayStr)}
+        dayOffType={selectedDayStr && statsDaysOffDetails ? statsDaysOffDetails[selectedDayStr]?.type : undefined}
+        dayOffReason={selectedDayStr && statsDaysOffDetails ? statsDaysOffDetails[selectedDayStr]?.reason : undefined}
+        noteContent={selectedDayStr ? statsNotes[selectedDayStr] || "" : ""}
+        onSaveNote={async (dateStr, content) => {
+          if (onSaveNote) await onSaveNote(dateStr, content);
+          setStatsNotes((prev) => ({ ...prev, [dateStr]: content }));
+        }}
       />
 
       {/* Charts Grid */}

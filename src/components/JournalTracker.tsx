@@ -825,11 +825,7 @@ export function JournalTracker() {
           ) : (
             <StatsPanel
               taskDefinitions={taskDefinitions}
-              assignments={assignments}
-              daysOff={daysOff}
-              daysOffDetails={daysOffDetails}
               userSettings={settings}
-              notes={notes}
               onSaveNote={saveNote}
             />
           )}
